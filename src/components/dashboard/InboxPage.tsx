@@ -100,11 +100,13 @@ const InboxPage = () => {
     fetchEmails();
   }, []);
 
-  // Auto-sync on first load if user has Google provider
+  // Auto-sync on first load only if user logged in via Google
   useEffect(() => {
     const autoSync = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.provider_token) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const hasGoogle = user?.app_metadata?.providers?.includes("google") || 
+                        user?.identities?.some(i => i.provider === "google");
+      if (hasGoogle) {
         await syncGmail();
       }
     };
