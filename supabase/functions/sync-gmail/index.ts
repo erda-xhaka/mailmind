@@ -175,9 +175,17 @@ Deno.serve(async (req) => {
 
         // Extract body
         let body = "";
+        const decodeBase64Utf8 = (data: string): string => {
+          const binary = atob(data.replace(/-/g, "+").replace(/_/g, "/"));
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+          return new TextDecoder("utf-8").decode(bytes);
+        };
         const extractText = (part: any): string => {
           if (part.mimeType === "text/plain" && part.body?.data) {
-            return atob(part.body.data.replace(/-/g, "+").replace(/_/g, "/"));
+            return decodeBase64Utf8(part.body.data);
           }
           if (part.parts) {
             for (const p of part.parts) {
