@@ -10,7 +10,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 const AIChatbotPage = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! I'm your MailMind AI assistant. I can help you search emails, draft replies, summarize threads, and manage your inbox. How can I help you today?" },
+    { role: "assistant", content: "Përshëndetje! Unë jam asistenti juaj MailMind AI. Mund t'ju ndihmoj të kërkoni emaile, të hartoni përgjigje, të përmbledhni thread-et dhe të menaxhoni inbox-in tuaj. Si mund t'ju ndihmoj sot?" },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +53,8 @@ const AIChatbotPage = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] -m-6">
       <div className="p-6 border-b border-border/50">
-        <h1 className="font-heading text-2xl font-bold">AI Assistant</h1>
-        <p className="text-muted-foreground text-sm mt-1">Ask me anything about your emails</p>
+        <h1 className="font-heading text-2xl font-bold">Asistenti AI</h1>
+        <p className="text-muted-foreground text-sm mt-1">Më pyet çfarëdo gjëje rreth emaileve tuaja</p>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
@@ -100,7 +100,7 @@ const AIChatbotPage = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask about your emails..."
+            placeholder="Pyet rreth emaileve tuaja..."
             className="bg-muted/50 border-border/50"
             disabled={isLoading}
           />

@@ -10,7 +10,7 @@ import SettingsPage from "@/components/dashboard/SettingsPage";
 import AIChatbotPage from "@/components/dashboard/AIChatbotPage";
 import EmailParserPage from "@/components/dashboard/EmailParserPage";
 import ReplyGeneratorPage from "@/components/dashboard/ReplyGeneratorPage";
-import QuickActionsPage from "@/components/dashboard/QuickActionsPage";
+
 
 const Dashboard = () => (
   <Routes>
@@ -26,7 +26,7 @@ const Dashboard = () => (
       <Route path="ai-chat" element={<AIChatbotPage />} />
       <Route path="email-parser" element={<EmailParserPage />} />
       <Route path="reply-generator" element={<ReplyGeneratorPage />} />
-      <Route path="quick-actions" element={<QuickActionsPage />} />
+      
     </Route>
   </Routes>
 );
