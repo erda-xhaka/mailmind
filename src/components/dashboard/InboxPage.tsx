@@ -184,6 +184,16 @@ const InboxPage = () => {
         return;
       }
 
+      // Check if user has Google identity before calling sync
+      const { data: { user } } = await supabase.auth.getUser();
+      const hasGoogle =
+        user?.app_metadata?.providers?.includes("google") ||
+        user?.identities?.some((i) => i.provider === "google");
+      if (!hasGoogle) {
+        toast.error("Please log in with Google to sync your Gmail inbox");
+        return;
+      }
+
       const res = await supabase.functions.invoke("sync-gmail", {
         body: {
           provider_token: session.provider_token,
