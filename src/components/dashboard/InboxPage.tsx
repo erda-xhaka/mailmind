@@ -30,11 +30,123 @@ const formatTime = (dateStr: string | null) => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const now = new Date();
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const diffDays = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0)
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   if (diffDays === 1) return "Yesterday";
   return `${diffDays} days ago`;
 };
+
+const EmailListItem = ({
+  email,
+  isSelected,
+  onSelect,
+  onMarkRead,
+}: {
+  email: Email;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onMarkRead: (id: string) => void;
+}) => (
+  <div
+    key={email.id}
+    onClick={() => {
+      onSelect(email.id);
+      if (!email.is_read) onMarkRead(email.id);
+    }}
+    className={`email-row ${!email.is_read ? "unread" : ""} ${
+      isSelected ? "bg-muted/50" : ""
+    }`}
+  >
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center justify-between">
+        <span
+          className={`text-sm font-medium truncate ${
+            !email.is_read ? "text-foreground" : "text-muted-foreground"
+          }`}
+        >
+          {email.from_email || "Unknown"}
+        </span>
+        <span className="text-xs text-muted-foreground shrink-0 ml-2">
+          {formatTime(email.created_at)}
+        </span>
+      </div>
+      <div className="text-sm text-foreground truncate mt-0.5">
+        {email.subject || "(No subject)"}
+      </div>
+      <div className="text-xs text-muted-foreground truncate mt-0.5">
+        {email.snippet || ""}
+      </div>
+      <div className="flex items-center gap-2 mt-1.5">
+        <span
+          className={`category-badge ${
+            categoryColors[email.category || "uncategorized"] ||
+            categoryColors.uncategorized
+          }`}
+        >
+          {email.category || "uncategorized"}
+        </span>
+        {email.is_starred && (
+          <Star className="h-3 w-3 text-category-documents fill-category-documents" />
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+const EmailDetail = ({
+  email,
+  onToggleStar,
+  onDelete,
+}: {
+  email: Email;
+  onToggleStar: () => void;
+  onDelete: () => void;
+}) => (
+  <>
+    <div className="p-6 border-b border-border/50">
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="font-heading text-xl font-semibold">
+            {email.subject || "(No subject)"}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {email.from_email} · {formatTime(email.created_at)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={onToggleStar}>
+            <Star
+              className={`h-4 w-4 ${
+                email.is_starred
+                  ? "fill-category-documents text-category-documents"
+                  : ""
+              }`}
+            />
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Reply className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Archive className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+    <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
+      <div className="prose prose-invert prose-sm max-w-none">
+        <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
+          {email.body || email.snippet || "No content"}
+        </p>
+      </div>
+    </div>
+  </>
+);
 
 const InboxPage = () => {
   const [emails, setEmails] = useState<Email[]>([]);
@@ -64,7 +176,9 @@ const InboxPage = () => {
   const syncGmail = useCallback(async () => {
     setSyncing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Please log in first");
         return;
@@ -78,7 +192,9 @@ const InboxPage = () => {
       });
 
       if (res.error) {
-        toast.error("Sync failed: " + (res.error.message || "Unknown error"));
+        toast.error(
+          "Sync failed: " + (res.error.message || "Unknown error")
+        );
         console.error(res.error);
       } else {
         const data = res.data;
@@ -100,12 +216,14 @@ const InboxPage = () => {
     fetchEmails();
   }, []);
 
-  // Auto-sync on first load only if user logged in via Google
   useEffect(() => {
     const autoSync = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const hasGoogle = user?.app_metadata?.providers?.includes("google") || 
-                        user?.identities?.some(i => i.provider === "google");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const hasGoogle =
+        user?.app_metadata?.providers?.includes("google") ||
+        user?.identities?.some((i) => i.provider === "google");
       if (hasGoogle) {
         await syncGmail();
       }
@@ -120,7 +238,9 @@ const InboxPage = () => {
       .eq("id", emailId);
     if (!error) {
       setEmails((prev) =>
-        prev.map((e) => (e.id === emailId ? { ...e, is_starred: !currentStarred } : e))
+        prev.map((e) =>
+          e.id === emailId ? { ...e, is_starred: !currentStarred } : e
+        )
       );
     }
   };
@@ -147,23 +267,25 @@ const InboxPage = () => {
   return (
     <div className="flex gap-0 -m-6 h-[calc(100vh-7rem)]">
       {/* Email List */}
-      <div className="w-96 border-r border-border/50 flex flex-col shrink-0">
+      <div className="w-96 border-r border-border/50 flex flex-col shrink-0 glass-card rounded-none border-t-0 border-b-0 border-l-0">
         <div className="p-4 border-b border-border/50 flex items-center justify-between">
           <div>
             <h2 className="font-heading text-lg font-semibold">Inbox</h2>
-            <p className="text-sm text-muted-foreground">{unreadCount} unread messages</p>
+            <p className="text-sm text-muted-foreground">
+              {unreadCount} unread messages
+            </p>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={syncGmail}
-              disabled={syncing}
-              title="Sync Gmail"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={syncing ? undefined : syncGmail}
+            disabled={syncing}
+            title="Sync Gmail"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
+            />
+          </Button>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {loading && emails.length === 0 ? (
@@ -174,42 +296,28 @@ const InboxPage = () => {
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
               <Mail className="h-8 w-8 mb-2 opacity-30" />
               <p>No emails yet</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={syncGmail} disabled={syncing}>
-                <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={syncGmail}
+                disabled={syncing}
+              >
+                <RefreshCw
+                  className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`}
+                />
                 Sync Gmail
               </Button>
             </div>
           ) : (
             emails.map((email) => (
-              <div
+              <EmailListItem
                 key={email.id}
-                onClick={() => {
-                  setSelectedId(email.id);
-                  if (!email.is_read) markAsRead(email.id);
-                }}
-                className={`email-row ${!email.is_read ? "unread" : ""} ${selectedId === email.id ? "bg-muted/50" : ""}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-medium truncate ${!email.is_read ? "text-foreground" : "text-muted-foreground"}`}>
-                      {email.from_email || "Unknown"}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                      {formatTime(email.created_at)}
-                    </span>
-                  </div>
-                  <div className="text-sm text-foreground truncate mt-0.5">{email.subject || "(No subject)"}</div>
-                  <div className="text-xs text-muted-foreground truncate mt-0.5">{email.snippet || ""}</div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`category-badge ${categoryColors[email.category || "uncategorized"] || categoryColors.uncategorized}`}>
-                      {email.category || "uncategorized"}
-                    </span>
-                    {email.is_starred && (
-                      <Star className="h-3 w-3 text-category-documents fill-category-documents" />
-                    )}
-                  </div>
-                </div>
-              </div>
+                email={email}
+                isSelected={selectedId === email.id}
+                onSelect={setSelectedId}
+                onMarkRead={markAsRead}
+              />
             ))
           )}
         </div>
@@ -218,41 +326,22 @@ const InboxPage = () => {
       {/* Email Detail */}
       <div className="flex-1 flex flex-col min-w-0">
         {selected ? (
-          <>
-            <div className="p-6 border-b border-border/50">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="font-heading text-xl font-semibold">{selected.subject || "(No subject)"}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selected.from_email} · {formatTime(selected.created_at)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => toggleStar(selected.id, !!selected.is_starred)}>
-                    <Star className={`h-4 w-4 ${selected.is_starred ? "fill-category-documents text-category-documents" : ""}`} />
-                  </Button>
-                  <Button variant="ghost" size="icon"><Reply className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon"><Archive className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => deleteEmail(selected.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
-              <div className="prose prose-invert prose-sm max-w-none">
-                <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                  {selected.body || selected.snippet || "No content"}
-                </p>
-              </div>
-            </div>
-          </>
+          <EmailDetail
+            email={selected}
+            onToggleStar={() =>
+              toggleStar(selected.id, !!selected.is_starred)
+            }
+            onDelete={() => deleteEmail(selected.id)}
+          />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>{emails.length === 0 ? "Your inbox is empty" : "Select an email to read"}</p>
+              <p>
+                {emails.length === 0
+                  ? "Your inbox is empty"
+                  : "Select an email to read"}
+              </p>
             </div>
           </div>
         )}
