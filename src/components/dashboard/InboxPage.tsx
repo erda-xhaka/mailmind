@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Mail, Star, Paperclip, Clock, Brain, Reply, Trash2, Archive, MoreHorizontal, RefreshCw } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Mail, Star, Reply, Trash2, Archive, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,8 +40,9 @@ const InboxPage = () => {
   const [emails, setEmails] = useState<Email[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
-  const fetchEmails = async () => {
+  const fetchEmails = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("emails")
@@ -59,10 +59,56 @@ const InboxPage = () => {
       }
     }
     setLoading(false);
-  };
+  }, [selectedId]);
+
+  const syncGmail = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Please log in first");
+        return;
+      }
+
+      const res = await supabase.functions.invoke("sync-gmail", {
+        body: {
+          provider_token: session.provider_token,
+          provider_refresh_token: session.provider_refresh_token,
+        },
+      });
+
+      if (res.error) {
+        toast.error("Sync failed: " + (res.error.message || "Unknown error"));
+        console.error(res.error);
+      } else {
+        const data = res.data;
+        if (data.synced > 0) {
+          toast.success(`Synced ${data.synced} new emails`);
+          await fetchEmails();
+        } else {
+          toast.info("No new emails to sync");
+        }
+      }
+    } catch (err: any) {
+      toast.error("Sync error: " + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchEmails]);
 
   useEffect(() => {
     fetchEmails();
+  }, []);
+
+  // Auto-sync on first load if user has Google provider
+  useEffect(() => {
+    const autoSync = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.provider_token) {
+        await syncGmail();
+      }
+    };
+    autoSync();
   }, []);
 
   const toggleStar = async (emailId: string, currentStarred: boolean) => {
@@ -105,9 +151,17 @@ const InboxPage = () => {
             <h2 className="font-heading text-lg font-semibold">Inbox</h2>
             <p className="text-sm text-muted-foreground">{unreadCount} unread messages</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={fetchEmails} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={syncGmail}
+              disabled={syncing}
+              title="Sync Gmail"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
           {loading && emails.length === 0 ? (
@@ -118,6 +172,10 @@ const InboxPage = () => {
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
               <Mail className="h-8 w-8 mb-2 opacity-30" />
               <p>No emails yet</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={syncGmail} disabled={syncing}>
+                <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`} />
+                Sync Gmail
+              </Button>
             </div>
           ) : (
             emails.map((email) => (
@@ -180,7 +238,6 @@ const InboxPage = () => {
               </div>
             </div>
 
-            {/* Email Body */}
             <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
               <div className="prose prose-invert prose-sm max-w-none">
                 <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
