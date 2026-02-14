@@ -1,40 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Mail, Star, Paperclip, Clock, Brain, Reply, Trash2, Archive, MoreHorizontal } from "lucide-react";
+import { Mail, Star, Paperclip, Clock, Brain, Reply, Trash2, Archive, MoreHorizontal, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-const mockEmails = [
-  {
-    id: 1, from: "Sarah Chen", email: "sarah@company.com", subject: "Q4 Product Roadmap Review",
-    preview: "Hi team, I've attached the updated Q4 roadmap with the changes we discussed in yesterday's standup...",
-    time: "10:32 AM", unread: true, starred: true, hasAttachment: true, category: "work",
-    aiSummary: "Sarah shared the updated Q4 roadmap. Key changes: delayed feature X to Q1, prioritized bug fixes. Action needed: review by Friday."
-  },
-  {
-    id: 2, from: "GitHub", email: "noreply@github.com", subject: "Pull request #342 merged",
-    preview: "Your pull request 'Fix authentication flow' has been merged into main branch...",
-    time: "9:15 AM", unread: true, starred: false, hasAttachment: false, category: "work",
-    aiSummary: "PR #342 (auth flow fix) was merged. No conflicts. CI passed."
-  },
-  {
-    id: 3, from: "David Park", email: "david@client.co", subject: "Invoice #1089 - December Services",
-    preview: "Please find attached the invoice for December consulting services. Payment terms are NET 30...",
-    time: "Yesterday", unread: false, starred: false, hasAttachment: true, category: "important",
-    aiSummary: "Invoice for $12,500 (Dec consulting). Due in 30 days. Attached as PDF."
-  },
-  {
-    id: 4, from: "Google Calendar", email: "calendar@google.com", subject: "Reminder: Team Sync @ 2:00 PM",
-    preview: "You have an upcoming event: Team Sync Meeting. Join with Google Meet...",
-    time: "Yesterday", unread: false, starred: false, hasAttachment: false, category: "meetings",
-    aiSummary: "Team sync meeting today at 2 PM via Google Meet."
-  },
-  {
-    id: 5, from: "Alex Morgan", email: "alex@personal.com", subject: "Weekend hiking trip plans",
-    preview: "Hey! Are you still up for the hiking trip this weekend? I was thinking we could try the mountain trail...",
-    time: "2 days ago", unread: false, starred: true, hasAttachment: false, category: "personal",
-    aiSummary: "Alex is confirming weekend hiking plans. Suggesting mountain trail. Needs your reply."
-  },
-];
+interface Email {
+  id: string;
+  from_email: string | null;
+  to_email: string | null;
+  subject: string | null;
+  snippet: string | null;
+  body: string | null;
+  is_read: boolean | null;
+  is_starred: boolean | null;
+  category: string | null;
+  created_at: string | null;
+}
 
 const categoryColors: Record<string, string> = {
   work: "bg-category-work/20 text-category-work",
@@ -42,46 +24,134 @@ const categoryColors: Record<string, string> = {
   important: "bg-category-important/20 text-category-important",
   meetings: "bg-category-meetings/20 text-category-meetings",
   documents: "bg-category-documents/20 text-category-documents",
+  uncategorized: "bg-category-uncategorized/20 text-category-uncategorized",
+};
+
+const formatTime = (dateStr: string | null) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (diffDays === 1) return "Yesterday";
+  return `${diffDays} days ago`;
 };
 
 const InboxPage = () => {
-  const [selectedId, setSelectedId] = useState<number | null>(1);
-  const selected = mockEmails.find((e) => e.id === selectedId);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEmails = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("emails")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to load emails");
+      console.error(error);
+    } else {
+      setEmails(data || []);
+      if (data && data.length > 0 && !selectedId) {
+        setSelectedId(data[0].id);
+      }
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchEmails();
+  }, []);
+
+  const toggleStar = async (emailId: string, currentStarred: boolean) => {
+    const { error } = await supabase
+      .from("emails")
+      .update({ is_starred: !currentStarred })
+      .eq("id", emailId);
+    if (!error) {
+      setEmails((prev) =>
+        prev.map((e) => (e.id === emailId ? { ...e, is_starred: !currentStarred } : e))
+      );
+    }
+  };
+
+  const markAsRead = async (emailId: string) => {
+    await supabase.from("emails").update({ is_read: true }).eq("id", emailId);
+    setEmails((prev) =>
+      prev.map((e) => (e.id === emailId ? { ...e, is_read: true } : e))
+    );
+  };
+
+  const deleteEmail = async (emailId: string) => {
+    const { error } = await supabase.from("emails").delete().eq("id", emailId);
+    if (!error) {
+      setEmails((prev) => prev.filter((e) => e.id !== emailId));
+      if (selectedId === emailId) setSelectedId(null);
+      toast.success("Email deleted");
+    }
+  };
+
+  const selected = emails.find((e) => e.id === selectedId);
+  const unreadCount = emails.filter((e) => !e.is_read).length;
 
   return (
     <div className="flex gap-0 -m-6 h-[calc(100vh-7rem)]">
       {/* Email List */}
       <div className="w-96 border-r border-border/50 flex flex-col shrink-0">
-        <div className="p-4 border-b border-border/50">
-          <h2 className="font-heading text-lg font-semibold">Inbox</h2>
-          <p className="text-sm text-muted-foreground">{mockEmails.filter(e => e.unread).length} unread messages</p>
+        <div className="p-4 border-b border-border/50 flex items-center justify-between">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">Inbox</h2>
+            <p className="text-sm text-muted-foreground">{unreadCount} unread messages</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={fetchEmails} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
         <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {mockEmails.map((email) => (
-            <div
-              key={email.id}
-              onClick={() => setSelectedId(email.id)}
-              className={`email-row ${email.unread ? "unread" : ""} ${selectedId === email.id ? "bg-muted/50" : ""}`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium truncate ${email.unread ? "text-foreground" : "text-muted-foreground"}`}>
-                    {email.from}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">{email.time}</span>
-                </div>
-                <div className="text-sm text-foreground truncate mt-0.5">{email.subject}</div>
-                <div className="text-xs text-muted-foreground truncate mt-0.5">{email.preview}</div>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className={`category-badge ${categoryColors[email.category] || ""}`}>
-                    {email.category}
-                  </span>
-                  {email.hasAttachment && <Paperclip className="h-3 w-3 text-muted-foreground" />}
-                  {email.starred && <Star className="h-3 w-3 text-category-documents fill-category-documents" />}
+          {loading && emails.length === 0 ? (
+            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+              Loading emails...
+            </div>
+          ) : emails.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
+              <Mail className="h-8 w-8 mb-2 opacity-30" />
+              <p>No emails yet</p>
+            </div>
+          ) : (
+            emails.map((email) => (
+              <div
+                key={email.id}
+                onClick={() => {
+                  setSelectedId(email.id);
+                  if (!email.is_read) markAsRead(email.id);
+                }}
+                className={`email-row ${!email.is_read ? "unread" : ""} ${selectedId === email.id ? "bg-muted/50" : ""}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium truncate ${!email.is_read ? "text-foreground" : "text-muted-foreground"}`}>
+                      {email.from_email || "Unknown"}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {formatTime(email.created_at)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-foreground truncate mt-0.5">{email.subject || "(No subject)"}</div>
+                  <div className="text-xs text-muted-foreground truncate mt-0.5">{email.snippet || ""}</div>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`category-badge ${categoryColors[email.category || "uncategorized"] || categoryColors.uncategorized}`}>
+                      {email.category || "uncategorized"}
+                    </span>
+                    {email.is_starred && (
+                      <Star className="h-3 w-3 text-category-documents fill-category-documents" />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -92,42 +162,29 @@ const InboxPage = () => {
             <div className="p-6 border-b border-border/50">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="font-heading text-xl font-semibold">{selected.subject}</h2>
-                  <p className="text-sm text-muted-foreground mt-1">{selected.from} &lt;{selected.email}&gt; · {selected.time}</p>
+                  <h2 className="font-heading text-xl font-semibold">{selected.subject || "(No subject)"}</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selected.from_email} · {formatTime(selected.created_at)}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => toggleStar(selected.id, !!selected.is_starred)}>
+                    <Star className={`h-4 w-4 ${selected.is_starred ? "fill-category-documents text-category-documents" : ""}`} />
+                  </Button>
                   <Button variant="ghost" size="icon"><Reply className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon"><Archive className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => deleteEmail(selected.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* AI Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mx-6 mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Brain className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium text-primary">AI Summary</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{selected.aiSummary}</p>
-              <div className="flex gap-2 mt-3">
-                <button className="ai-action-btn"><Reply className="h-3.5 w-3.5" /> Draft Reply</button>
-                <button className="ai-action-btn"><Clock className="h-3.5 w-3.5" /> Remind Later</button>
-              </div>
-            </motion.div>
-
             {/* Email Body */}
             <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
               <div className="prose prose-invert prose-sm max-w-none">
-                <p className="text-foreground/80 leading-relaxed">{selected.preview}</p>
-                <p className="text-foreground/80 leading-relaxed mt-4">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                  {selected.body || selected.snippet || "No content"}
                 </p>
               </div>
             </div>
@@ -136,7 +193,7 @@ const InboxPage = () => {
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Select an email to read</p>
+              <p>{emails.length === 0 ? "Your inbox is empty" : "Select an email to read"}</p>
             </div>
           </div>
         )}
