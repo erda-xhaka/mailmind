@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Mail, Star, Reply, Trash2, Archive, RefreshCw } from "lucide-react";
+import { Mail, Star, Reply, Trash2, Archive, RefreshCw, ArrowLeft } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -100,23 +101,32 @@ const EmailDetail = ({
   email,
   onToggleStar,
   onDelete,
+  onBack,
 }: {
   email: Email;
   onToggleStar: () => void;
   onDelete: () => void;
+  onBack?: () => void;
 }) => (
   <>
-    <div className="p-6 border-b border-border/50">
+    <div className="p-4 md:p-6 border-b border-border/50">
       <div className="flex items-start justify-between">
-        <div>
-          <h2 className="font-heading text-xl font-semibold">
-            {email.subject || "(No subject)"}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {email.from_email} · {formatTime(email.created_at)}
-          </p>
+        <div className="flex items-start gap-2 min-w-0">
+          {onBack && (
+            <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 mt-0.5">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <div className="min-w-0">
+            <h2 className="font-heading text-lg md:text-xl font-semibold truncate">
+              {email.subject || "(No subject)"}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {email.from_email} · {formatTime(email.created_at)}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button variant="ghost" size="icon" onClick={onToggleStar}>
             <Star
               className={`h-4 w-4 ${
@@ -129,7 +139,7 @@ const EmailDetail = ({
           <Button variant="ghost" size="icon">
             <Reply className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hidden md:inline-flex">
             <Archive className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onDelete}>
@@ -138,7 +148,7 @@ const EmailDetail = ({
         </div>
       </div>
     </div>
-    <div className="flex-1 overflow-y-auto scrollbar-thin p-6">
+    <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6">
       <div className="prose prose-invert prose-sm max-w-none">
         <p className="text-foreground/80 leading-relaxed whitespace-pre-wrap">
           {email.body || email.snippet || "No content"}
@@ -153,6 +163,7 @@ const InboxPage = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const isMobile = useIsMobile();
 
   const fetchEmails = useCallback(async () => {
     setLoading(true);
@@ -274,88 +285,96 @@ const InboxPage = () => {
   const selected = emails.find((e) => e.id === selectedId);
   const unreadCount = emails.filter((e) => !e.is_read).length;
 
-  return (
-    <div className="flex gap-0 -m-6 h-[calc(100vh-7rem)]">
-      {/* Email List */}
-      <div className="w-96 border-r border-border/50 flex flex-col shrink-0 glass-card rounded-none border-t-0 border-b-0 border-l-0">
-        <div className="p-4 border-b border-border/50 flex items-center justify-between">
-          <div>
-            <h2 className="font-heading text-lg font-semibold">Inbox</h2>
-            <p className="text-sm text-muted-foreground">
-              {unreadCount} unread messages
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={syncing ? undefined : syncGmail}
-            disabled={syncing}
-            title="Sync Gmail"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
-            />
-          </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-          {loading && emails.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-              Loading emails...
-            </div>
-          ) : emails.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
-              <Mail className="h-8 w-8 mb-2 opacity-30" />
-              <p>No emails yet</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={syncGmail}
-                disabled={syncing}
-              >
-                <RefreshCw
-                  className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`}
-                />
-                Sync Gmail
-              </Button>
-            </div>
-          ) : (
-            emails.map((email) => (
-              <EmailListItem
-                key={email.id}
-                email={email}
-                isSelected={selectedId === email.id}
-                onSelect={setSelectedId}
-                onMarkRead={markAsRead}
-              />
-            ))
-          )}
-        </div>
-      </div>
+  // On mobile, show either list or detail
+  const showDetailMobile = isMobile && selectedId && selected;
 
-      {/* Email Detail */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {selected ? (
-          <EmailDetail
-            email={selected}
-            onToggleStar={() =>
-              toggleStar(selected.id, !!selected.is_starred)
-            }
-            onDelete={() => deleteEmail(selected.id)}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>
-                {emails.length === 0
-                  ? "Your inbox is empty"
-                  : "Select an email to read"}
+  return (
+    <div className="flex gap-0 -m-3 md:-m-6 h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
+      {/* Email List - hide on mobile when viewing detail */}
+      {(!isMobile || !showDetailMobile) && (
+        <div className="w-full md:w-96 border-r border-border/50 flex flex-col shrink-0 glass-card rounded-none border-t-0 border-b-0 border-l-0">
+          <div className="p-4 border-b border-border/50 flex items-center justify-between">
+            <div>
+              <h2 className="font-heading text-lg font-semibold">Inbox</h2>
+              <p className="text-sm text-muted-foreground">
+                {unreadCount} mesazhe të palexuara
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={syncing ? undefined : syncGmail}
+              disabled={syncing}
+              title="Sinkronizo Gmail"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
+              />
+            </Button>
           </div>
-        )}
-      </div>
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            {loading && emails.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                Duke ngarkuar emailet...
+              </div>
+            ) : emails.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
+                <Mail className="h-8 w-8 mb-2 opacity-30" />
+                <p>Nuk ka emaile ende</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={syncGmail}
+                  disabled={syncing}
+                >
+                  <RefreshCw
+                    className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`}
+                  />
+                  Sinkronizo Gmail
+                </Button>
+              </div>
+            ) : (
+              emails.map((email) => (
+                <EmailListItem
+                  key={email.id}
+                  email={email}
+                  isSelected={selectedId === email.id}
+                  onSelect={setSelectedId}
+                  onMarkRead={markAsRead}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Email Detail - full screen on mobile */}
+      {(!isMobile || showDetailMobile) && (
+        <div className="flex-1 flex flex-col min-w-0">
+          {selected ? (
+            <EmailDetail
+              email={selected}
+              onToggleStar={() =>
+                toggleStar(selected.id, !!selected.is_starred)
+              }
+              onDelete={() => deleteEmail(selected.id)}
+              onBack={isMobile ? () => setSelectedId(null) : undefined}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <Mail className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>
+                  {emails.length === 0
+                    ? "Inbox-i juaj është bosh"
+                    : "Zgjidhni një email për ta lexuar"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
