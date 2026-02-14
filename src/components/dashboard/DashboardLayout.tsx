@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 const navSections = [
   {
@@ -34,7 +35,17 @@ const navSections = [
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [userInitial, setUserInitial] = useState("U");
   const location = useLocation();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const name = user.user_metadata?.full_name || user.email || "";
+        setUserInitial((name[0] || "U").toUpperCase());
+      }
+    });
+  }, []);
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
@@ -127,7 +138,7 @@ const DashboardLayout = () => {
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
             </Button>
             <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
-              U
+              {userInitial}
             </div>
           </div>
         </header>

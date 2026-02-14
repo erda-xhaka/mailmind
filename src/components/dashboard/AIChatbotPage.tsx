@@ -1,26 +1,53 @@
-import { useState } from "react";
-import { Bot, Send, User } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Bot, Send, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { streamChat } from "@/lib/streamChat";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
-type Message = { role: "ai" | "user"; content: string };
-
-const initialMessages: Message[] = [
-  { role: "ai", content: "Hi! I'm your MailMind AI assistant. I can help you search emails, draft replies, summarize threads, and manage your inbox. How can I help you today?" },
-];
+type Message = { role: "user" | "assistant"; content: string };
 
 const AIChatbotPage = () => {
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: "Hi! I'm your MailMind AI assistant. I can help you search emails, draft replies, summarize threads, and manage your inbox. How can I help you today?" },
+  ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { role: "user" as const, content: input },
-      { role: "ai" as const, content: "I understand you're asking about: \"" + input + "\". In a fully connected version, I'd search your emails and provide intelligent responses. This is a demo preview of the AI chat interface." },
-    ]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+    const userMsg: Message = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setIsLoading(true);
+
+    let assistantSoFar = "";
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+        }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
+    };
+
+    await streamChat({
+      messages: [...messages, userMsg],
+      onDelta: upsertAssistant,
+      onDone: () => setIsLoading(false),
+      onError: (err) => {
+        toast.error(err.message);
+        setIsLoading(false);
+      },
+    });
   };
 
   return (
@@ -33,13 +60,19 @@ const AIChatbotPage = () => {
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
-            {msg.role === "ai" && (
+            {msg.role === "assistant" && (
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Bot className="h-4 w-4 text-primary" />
               </div>
             )}
-            <div className={`max-w-md rounded-xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "glass-card"}`}>
-              {msg.content}
+            <div className={`max-w-lg rounded-xl px-4 py-3 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "glass-card"}`}>
+              {msg.role === "assistant" ? (
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                msg.content
+              )}
             </div>
             {msg.role === "user" && (
               <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -48,6 +81,17 @@ const AIChatbotPage = () => {
             )}
           </div>
         ))}
+        {isLoading && messages[messages.length - 1]?.role === "user" && (
+          <div className="flex gap-3">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Bot className="h-4 w-4 text-primary" />
+            </div>
+            <div className="glass-card rounded-xl px-4 py-3">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
       </div>
 
       <div className="p-4 border-t border-border/50">
@@ -58,8 +102,11 @@ const AIChatbotPage = () => {
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Ask about your emails..."
             className="bg-muted/50 border-border/50"
+            disabled={isLoading}
           />
-          <Button onClick={handleSend} size="icon"><Send className="h-4 w-4" /></Button>
+          <Button onClick={handleSend} size="icon" disabled={isLoading}>
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
