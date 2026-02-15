@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, messages, emailContent, tone, emails } = body;
+    const { action, messages, emailContent, tone, emails, draftText } = body;
 
     let systemPrompt = "";
     let userContent = "";
@@ -46,6 +46,11 @@ Deno.serve(async (req) => {
       case "summarize":
         systemPrompt = "You are an email thread summarizer. Summarize the email threads provided. For each thread, provide: thread_title (string), email_count (number), summary (string - 2-3 sentences), action_items (array of strings). Return a JSON array of these objects. Only return valid JSON, no other text.";
         userContent = JSON.stringify(emails);
+        break;
+
+      case "proofread":
+        systemPrompt = `You are an expert email proofreader. Analyze the provided email draft for grammar errors, clarity, tone, sentence structure, and language consistency. Return a JSON object with: { "issues": [ { "original": "exact text with issue", "suggestion": "corrected text", "explanation": "why this change improves the text" } ], "corrected_text": "the full corrected version of the text" }. Only return valid JSON, no other text.`;
+        userContent = draftText;
         break;
 
       default:

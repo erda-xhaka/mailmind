@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import InboxPage from "@/components/dashboard/InboxPage";
 import DraftsPage from "@/components/dashboard/DraftsPage";
+import DraftEditPage from "@/components/dashboard/DraftEditPage";
 import SummariesPage from "@/components/dashboard/SummariesPage";
 import CalendarPage from "@/components/dashboard/CalendarPage";
 import DocumentsPage from "@/components/dashboard/DocumentsPage";
@@ -11,13 +12,13 @@ import AIChatbotPage from "@/components/dashboard/AIChatbotPage";
 import EmailParserPage from "@/components/dashboard/EmailParserPage";
 import ReplyGeneratorPage from "@/components/dashboard/ReplyGeneratorPage";
 
-
 const Dashboard = () => (
   <Routes>
     <Route element={<DashboardLayout />}>
       <Route index element={<Navigate to="inbox" replace />} />
       <Route path="inbox" element={<InboxPage />} />
       <Route path="drafts" element={<DraftsPage />} />
+      <Route path="drafts/:draftId" element={<DraftEditPage />} />
       <Route path="summaries" element={<SummariesPage />} />
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
@@ -26,7 +27,6 @@ const Dashboard = () => (
       <Route path="ai-chat" element={<AIChatbotPage />} />
       <Route path="email-parser" element={<EmailParserPage />} />
       <Route path="reply-generator" element={<ReplyGeneratorPage />} />
-      
     </Route>
   </Routes>
 );
