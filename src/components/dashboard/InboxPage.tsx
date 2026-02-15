@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { Mail, Star, Reply, Trash2, Archive, RefreshCw, ArrowLeft } from "lucide-react";
+import { Mail, Star, Trash2, Archive, RefreshCw, ArrowLeft, Tags, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -18,13 +25,18 @@ interface Email {
   created_at: string | null;
 }
 
-const categoryColors: Record<string, string> = {
-  work: "bg-category-work/20 text-category-work",
-  personal: "bg-category-personal/20 text-category-personal",
-  important: "bg-category-important/20 text-category-important",
-  meetings: "bg-category-meetings/20 text-category-meetings",
-  documents: "bg-category-documents/20 text-category-documents",
-  uncategorized: "bg-category-uncategorized/20 text-category-uncategorized",
+const CATEGORIES = [
+  { name: "Personale", color: "bg-blue-400/20 text-blue-400" },
+  { name: "Punë", color: "bg-blue-700/20 text-blue-300" },
+  { name: "Miqësore", color: "bg-emerald-500/20 text-emerald-400" },
+  { name: "Të rëndësishme", color: "bg-amber-500/20 text-amber-400" },
+  { name: "Urgjente", color: "bg-red-500/20 text-red-400" },
+  { name: "Të tjera", color: "bg-muted text-muted-foreground" },
+];
+
+const getCategoryStyle = (category: string | null) => {
+  const found = CATEGORIES.find((c) => c.name.toLowerCase() === category?.toLowerCase());
+  return found?.color || "bg-muted text-muted-foreground";
 };
 
 const formatTime = (dateStr: string | null) => {
@@ -81,14 +93,11 @@ const EmailListItem = ({
         {email.snippet || ""}
       </div>
       <div className="flex items-center gap-2 mt-1.5">
-        <span
-          className={`category-badge ${
-            categoryColors[email.category || "uncategorized"] ||
-            categoryColors.uncategorized
-          }`}
-        >
-          {email.category || "uncategorized"}
-        </span>
+        {email.category && email.category !== "uncategorized" && (
+          <span className={`category-badge ${getCategoryStyle(email.category)}`}>
+            {email.category}
+          </span>
+        )}
         {email.is_starred && (
           <Star className="h-3 w-3 text-category-documents fill-category-documents" />
         )}
@@ -160,6 +169,8 @@ const InboxPage = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [categorizing, setCategorizing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const fetchEmails = useCallback(async () => {
@@ -192,7 +203,6 @@ const InboxPage = () => {
         return;
       }
 
-      // Check if user has Google identity before calling sync
       const { data: { user } } = await supabase.auth.getUser();
       const hasGoogle =
         user?.app_metadata?.providers?.includes("google") ||
@@ -229,6 +239,72 @@ const InboxPage = () => {
       setSyncing(false);
     }
   }, [fetchEmails]);
+
+  const categorizeEmails = useCallback(async () => {
+    const uncategorized = emails.filter(
+      (e) => !e.category || e.category === "uncategorized"
+    );
+    if (uncategorized.length === 0) {
+      toast.info("Të gjitha emailet janë kategorizuar tashmë");
+      return;
+    }
+
+    setCategorizing(true);
+    try {
+      const emailsToCateg = uncategorized.map((e) => ({
+        id: e.id,
+        from: e.from_email,
+        subject: e.subject,
+        body: (e.body || e.snippet || "").slice(0, 500),
+      }));
+
+      // Process in batches of 10
+      const batchSize = 10;
+      for (let i = 0; i < emailsToCateg.length; i += batchSize) {
+        const batch = emailsToCateg.slice(i, i + batchSize);
+        const res = await supabase.functions.invoke("ai-assistant", {
+          body: { action: "categorize", emailsToCateg: batch },
+        });
+
+        if (res.error) {
+          console.error("Categorize error:", res.error);
+          continue;
+        }
+
+        let results: { id: string; category: string }[] = [];
+        try {
+          const raw = res.data?.result || "";
+          const cleaned = raw.replace(/```json\n?|\n?```/g, "").trim();
+          results = JSON.parse(cleaned);
+        } catch {
+          console.error("Failed to parse categorize result");
+          continue;
+        }
+
+        // Update each email in DB
+        for (const r of results) {
+          await supabase
+            .from("emails")
+            .update({ category: r.category })
+            .eq("id", r.id);
+        }
+
+        // Update local state
+        setEmails((prev) =>
+          prev.map((e) => {
+            const match = results.find((r) => r.id === e.id);
+            return match ? { ...e, category: match.category } : e;
+          })
+        );
+      }
+
+      toast.success("Emailet u kategorizuan me sukses");
+    } catch (err: any) {
+      toast.error("Gabim gjatë kategorizimit: " + err.message);
+    } finally {
+      setCategorizing(false);
+    }
+  }, [emails]);
 
   useEffect(() => {
     fetchEmails();
@@ -279,60 +355,121 @@ const InboxPage = () => {
     }
   };
 
-  const selected = emails.find((e) => e.id === selectedId);
+  const filteredEmails = activeFilter
+    ? emails.filter((e) => e.category?.toLowerCase() === activeFilter.toLowerCase())
+    : emails;
+
+  const selected = filteredEmails.find((e) => e.id === selectedId) || (selectedId ? emails.find((e) => e.id === selectedId) : null);
   const unreadCount = emails.filter((e) => !e.is_read).length;
 
-  // On mobile, show either list or detail
   const showDetailMobile = isMobile && selectedId && selected;
 
   return (
     <div className="flex gap-0 -m-3 md:-m-6 h-[calc(100vh-5rem)] md:h-[calc(100vh-7rem)]">
-      {/* Email List - hide on mobile when viewing detail */}
       {(!isMobile || !showDetailMobile) && (
         <div className="w-full md:w-96 border-r border-border/50 flex flex-col shrink-0 glass-card rounded-none border-t-0 border-b-0 border-l-0">
-          <div className="p-4 border-b border-border/50 flex items-center justify-between">
-            <div>
-              <h2 className="font-heading text-lg font-semibold">Inbox</h2>
-              <p className="text-sm text-muted-foreground">
-                {unreadCount} mesazhe të palexuara
-              </p>
+          <div className="p-4 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-heading text-lg font-semibold">Inbox</h2>
+                <p className="text-sm text-muted-foreground">
+                  {unreadCount} mesazhe të palexuara
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={categorizing}
+                      className="text-xs"
+                    >
+                      {categorizing ? (
+                        <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <Tags className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Kategorizo
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={categorizeEmails} className="font-medium">
+                      <Tags className="h-4 w-4 mr-2" />
+                      Kategorizo të gjitha
+                    </DropdownMenuItem>
+                    <div className="h-px bg-border my-1" />
+                    {CATEGORIES.map((cat) => (
+                      <DropdownMenuItem
+                        key={cat.name}
+                        onClick={() => setActiveFilter(cat.name)}
+                      >
+                        <span className={`inline-block w-2 h-2 rounded-full mr-2 ${cat.color.split(" ")[0]}`} />
+                        {cat.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={syncing ? undefined : syncGmail}
+                  disabled={syncing}
+                  title="Sinkronizo Gmail"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
+                  />
+                </Button>
+              </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={syncing ? undefined : syncGmail}
-              disabled={syncing}
-              title="Sinkronizo Gmail"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`}
-              />
-            </Button>
+            {activeFilter && (
+              <div className="mt-2 flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  Duke shfaqur: {activeFilter} ({filteredEmails.length} email-e)
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setActiveFilter(null)}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Pastro filtrin
+                </Button>
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto scrollbar-thin">
             {loading && emails.length === 0 ? (
               <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
                 Duke ngarkuar emailet...
               </div>
-            ) : emails.length === 0 ? (
+            ) : filteredEmails.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm">
                 <Mail className="h-8 w-8 mb-2 opacity-30" />
-                <p>Nuk ka emaile ende</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={syncGmail}
-                  disabled={syncing}
-                >
-                  <RefreshCw
-                    className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`}
-                  />
-                  Sinkronizo Gmail
-                </Button>
+                {activeFilter ? (
+                  <p>Nuk ka emaile në kategorinë "{activeFilter}"</p>
+                ) : (
+                  <>
+                    <p>Nuk ka emaile ende</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={syncGmail}
+                      disabled={syncing}
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 mr-1 ${syncing ? "animate-spin" : ""}`}
+                      />
+                      Sinkronizo Gmail
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
-              emails.map((email) => (
+              filteredEmails.map((email) => (
                 <EmailListItem
                   key={email.id}
                   email={email}
@@ -346,7 +483,6 @@ const InboxPage = () => {
         </div>
       )}
 
-      {/* Email Detail - full screen on mobile */}
       {(!isMobile || showDetailMobile) && (
         <div className="flex-1 flex flex-col min-w-0">
           {selected ? (

@@ -53,6 +53,21 @@ Deno.serve(async (req) => {
         userContent = draftText;
         break;
 
+      case "categorize":
+        systemPrompt = `You are an email categorizer. For each email provided, assign exactly one category from this list: Personale, Punë, Miqësore, Të rëndësishme, Urgjente, Të tjera.
+
+Rules:
+- Personale: from family, close friends, personal matters
+- Punë: from colleagues, clients, bosses, work projects and tasks
+- Miqësore: from friends, acquaintances, informal tone
+- Të rëndësishme: contains deadlines, decisions, critical information
+- Urgjente: requires action within 24 hours, critical problems
+- Të tjera: anything else
+
+Return a JSON array where each element is: { "id": "email_id", "category": "one of the 6 categories" }. Only return valid JSON, no other text.`;
+        userContent = JSON.stringify(body.emailsToCateg);
+        break;
+
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {
           status: 400,
