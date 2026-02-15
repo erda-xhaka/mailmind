@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { callAI } from "@/lib/streamChat";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const tones = ["Professional", "Friendly", "Concise", "Formal"];
@@ -20,6 +21,17 @@ const ReplyGeneratorPage = () => {
     try {
       const { result } = await callAI("reply", { emailContent: email, tone });
       setReply(result);
+
+      // Auto-save as draft
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("ai_replies").insert({
+          user_id: user.id,
+          reply_text: result,
+          subject: `Re: ${tone} reply`,
+        } as any);
+        toast.success("Draft saved successfully");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to generate reply");
     } finally {
