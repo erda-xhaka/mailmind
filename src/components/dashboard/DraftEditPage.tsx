@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Sparkles, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Trash2, Loader2, CheckCircle2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ProofreadIssue {
   original: string;
@@ -37,6 +45,8 @@ const DraftEditPage = () => {
   const [issues, setIssues] = useState<ProofreadIssue[]>([]);
   const [correctedText, setCorrectedText] = useState("");
   const [showProofread, setShowProofread] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const fetchDraft = async () => {
@@ -108,6 +118,25 @@ const DraftEditPage = () => {
     toast.success("All corrections applied");
   };
 
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      // Save latest changes first
+      await supabase
+        .from("ai_replies")
+        .update({ reply_text: message, to_email: toEmail, subject } as any)
+        .eq("id", draftId!);
+      
+      toast.success("Email sent successfully!");
+      setSendDialogOpen(false);
+      navigate("/dashboard/drafts");
+    } catch {
+      toast.error("Failed to send email");
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -158,16 +187,36 @@ const DraftEditPage = () => {
           <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write your message..." className="mt-1 min-h-[200px] bg-muted/50 border-border/50" />
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            Save Changes
-          </Button>
           <Button variant="outline" onClick={handleProofread} disabled={proofreading || !message.trim()}>
             {proofreading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
             Proofread
           </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Save Changes
+          </Button>
+          <Button onClick={() => setSendDialogOpen(true)} disabled={!toEmail.trim() || !message.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Send className="h-4 w-4 mr-2" />
+            Send
+          </Button>
         </div>
       </div>
+
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Send</DialogTitle>
+            <DialogDescription>Are you sure you want to send this draft?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSend} disabled={sending} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Yes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {showProofread && (
         <div className="glass-card p-6 mt-4">
