@@ -136,9 +136,6 @@ const EmailDetail = ({
               }`}
             />
           </Button>
-          <Button variant="ghost" size="icon">
-            <Reply className="h-4 w-4" />
-          </Button>
           <Button variant="ghost" size="icon" className="hidden md:inline-flex">
             <Archive className="h-4 w-4" />
           </Button>
