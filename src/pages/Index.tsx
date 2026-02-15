@@ -206,6 +206,10 @@ const Index = () => {
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> No credit card</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Free forever plan</span>
                 <span className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Cancel anytime</span>
+                <span className="text-muted-foreground/50">|</span>
+                <a href="https://mailmind-9vxe.onrender.com/privacy" className="hover:text-primary transition-colors">Privacy Policy</a>
+                <span className="text-muted-foreground/50">|</span>
+                <a href="https://mailmind-9vxe.onrender.com/terms" className="hover:text-primary transition-colors">Terms of Service</a>
               </div>
             </div>
           </motion.div>
