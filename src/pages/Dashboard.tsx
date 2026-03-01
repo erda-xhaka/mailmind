@@ -4,6 +4,7 @@ import InboxPage from "@/components/dashboard/InboxPage";
 import DraftsPage from "@/components/dashboard/DraftsPage";
 import DraftEditPage from "@/components/dashboard/DraftEditPage";
 import SummariesPage from "@/components/dashboard/SummariesPage";
+import SummaryDetailPage from "@/components/dashboard/SummaryDetailPage";
 import CalendarPage from "@/components/dashboard/CalendarPage";
 import DocumentsPage from "@/components/dashboard/DocumentsPage";
 import AnalyticsPage from "@/components/dashboard/AnalyticsPage";
@@ -20,6 +21,7 @@ const Dashboard = () => (
       <Route path="drafts" element={<DraftsPage />} />
       <Route path="drafts/:draftId" element={<DraftEditPage />} />
       <Route path="summaries" element={<SummariesPage />} />
+      <Route path="summaries/:id" element={<SummaryDetailPage />} />
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
       <Route path="analytics" element={<AnalyticsPage />} />
