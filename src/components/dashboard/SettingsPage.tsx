@@ -135,8 +135,11 @@ const SettingsPage = () => {
           </h3>
           <p className="text-sm text-muted-foreground mb-3">Connect your Gmail for AI processing</p>
           {hasGoogle ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="category-badge bg-category-personal/20 text-category-personal">✓ Gmail Connected</span>
+              <Button variant="destructive" size="sm" onClick={handleDisconnectGmail}>
+                Disconnect
+              </Button>
             </div>
           ) : (
             <Button variant="outline" onClick={handleGoogleConnect}>Connect Gmail</Button>
