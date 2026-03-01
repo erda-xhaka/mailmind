@@ -21,6 +21,7 @@ const Dashboard = () => (
       <Route path="drafts" element={<DraftsPage />} />
       <Route path="drafts/:draftId" element={<DraftEditPage />} />
       <Route path="summaries" element={<SummariesPage />} />
+      <Route path="summaries/:id" element={<SummaryDetailPage />} />
       <Route path="calendar" element={<CalendarPage />} />
       <Route path="documents" element={<DocumentsPage />} />
       <Route path="analytics" element={<AnalyticsPage />} />

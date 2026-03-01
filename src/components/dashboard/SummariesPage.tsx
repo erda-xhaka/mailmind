@@ -95,7 +95,11 @@ const SummariesPage = () => {
 
       <div className="space-y-3">
         {summaries.map((s, i) => (
-          <div key={i} className="glass-card p-5 hover:border-primary/30 transition-all cursor-pointer group">
+          <div
+            key={i}
+            className="glass-card p-5 hover:border-primary/30 transition-all cursor-pointer group"
+            onClick={() => navigate(`/dashboard/summaries/${i}`)}
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -103,15 +107,7 @@ const SummariesPage = () => {
                   <span className="font-medium text-sm">{s.thread_title}</span>
                   <span className="text-xs text-muted-foreground">{s.email_count} emails</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{s.summary}</p>
-                {s.action_items?.length > 0 && (
-                  <div className="mt-2">
-                    <span className="text-xs text-primary font-medium">Action Items:</span>
-                    <ul className="list-disc list-inside text-xs text-muted-foreground mt-1">
-                      {s.action_items.map((item, j) => <li key={j}>{item}</li>)}
-                    </ul>
-                  </div>
-                )}
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">{s.summary}</p>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
             </div>
