@@ -14,6 +14,7 @@ interface ThreadSummary {
 }
 
 const SummariesPage = () => {
+  const navigate = useNavigate();
   const [summaries, setSummaries] = useState<ThreadSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [emailCount, setEmailCount] = useState(0);
