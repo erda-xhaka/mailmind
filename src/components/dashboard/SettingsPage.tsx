@@ -71,6 +71,16 @@ const SettingsPage = () => {
     if (error) toast.error(error.message);
   };
 
+  const handleDisconnectGmail = async () => {
+    const { error } = await supabase.functions.invoke("disconnect-gmail");
+    if (error) {
+      toast.error("Failed to disconnect Gmail");
+    } else {
+      setHasGoogle(false);
+      toast.success("Gmail disconnected successfully");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
