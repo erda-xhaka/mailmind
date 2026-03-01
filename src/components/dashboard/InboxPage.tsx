@@ -313,17 +313,24 @@ const InboxPage = () => {
   useEffect(() => {
     const autoSync = async () => {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const hasGoogle =
-        user?.app_metadata?.providers?.includes("google") ||
-        user?.identities?.some((i) => i.provider === "google");
-      if (hasGoogle) {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const statusRes = await supabase.functions.invoke("sync-gmail", {
+        body: {
+          validate_only: true,
+          provider_token: session?.provider_token,
+          provider_refresh_token: session?.provider_refresh_token,
+        },
+      });
+
+      if (!statusRes.error && statusRes.data?.connected) {
         await syncGmail();
       }
     };
+
     autoSync();
-  }, []);
+  }, [syncGmail]);
 
   const toggleStar = async (emailId: string, currentStarred: boolean) => {
     const { error } = await supabase
