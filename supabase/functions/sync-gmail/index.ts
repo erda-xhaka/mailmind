@@ -187,6 +187,29 @@ Deno.serve(async (req) => {
     );
     const gmailData = await gmailRes.json();
 
+    if (!gmailRes.ok) {
+      if (gmailRes.status === 401 || gmailRes.status === 403) {
+        await supabaseAdmin.from("gmail_tokens").delete().eq("user_id", user.id);
+        return new Response(
+          JSON.stringify({
+            error: "REAUTH_REQUIRED",
+            message: "Google authorization failed. Please reconnect Gmail.",
+            reauth_required: true,
+            connected: false,
+          }),
+          {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(JSON.stringify({ error: "Failed to fetch Gmail inbox", details: gmailData }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!gmailData.messages || gmailData.messages.length === 0) {
       return new Response(JSON.stringify({ synced: 0, message: "No messages found" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
