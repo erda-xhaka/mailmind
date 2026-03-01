@@ -59,7 +59,9 @@ const SummariesPage = () => {
       const { result } = await callAI("summarize", { emails: threadList.slice(0, 10) });
       const cleaned = result.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
-      setSummaries(Array.isArray(parsed) ? parsed : [parsed]);
+      const list = Array.isArray(parsed) ? parsed : [parsed];
+      setSummaries(list);
+      sessionStorage.setItem("mailmind_summaries", JSON.stringify(list));
     } catch (err: any) {
       toast.error(err.message || "Failed to generate summaries");
     } finally {
