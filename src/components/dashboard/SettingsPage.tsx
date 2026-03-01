@@ -21,20 +21,31 @@ const SettingsPage = () => {
       if (!user) return;
 
       setEmail(user.email || "");
-      setHasGoogle(
-        user.app_metadata?.providers?.includes("google") ||
-        user.identities?.some((i) => i.provider === "google") || false
-      );
 
-      const { data } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const statusRes = await supabase.functions.invoke("sync-gmail", {
+        body: {
+          validate_only: true,
+          provider_token: session?.provider_token,
+          provider_refresh_token: session?.provider_refresh_token,
+        },
+      });
+
+      if (statusRes.error) {
+        setHasGoogle(false);
+      } else {
+        setHasGoogle(Boolean(statusRes.data?.connected));
+      }
+
+      const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (data) {
-        setFullName(data.full_name || "");
-        setAvatarUrl(data.avatar_url || "");
+      if (profile) {
+        setFullName(profile.full_name || "");
+        setAvatarUrl(profile.avatar_url || "");
       }
       setLoading(false);
     };
@@ -64,8 +75,9 @@ const SettingsPage = () => {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard/settings`,
-        scopes: "https://www.googleapis.com/auth/gmail.readonly",
-        queryParams: { access_type: "offline", prompt: "consent" },
+        scopes:
+          "openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.labels https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly",
+        queryParams: { access_type: "offline", prompt: "consent", include_granted_scopes: "true" },
       },
     });
     if (error) toast.error(error.message);
@@ -135,10 +147,10 @@ const SettingsPage = () => {
           </h3>
           <p className="text-sm text-muted-foreground mb-3">Connect your Gmail for AI processing</p>
           {hasGoogle ? (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="category-badge bg-category-personal/20 text-category-personal">✓ Gmail Connected</span>
-              <Button variant="destructive" size="sm" onClick={handleDisconnectGmail}>
-                Disconnect
+              <Button variant="outline" size="sm" onClick={handleDisconnectGmail}>
+                Disconnect / Revoke Access
               </Button>
             </div>
           ) : (
