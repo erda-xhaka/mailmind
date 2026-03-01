@@ -203,6 +203,15 @@ const InboxPage = () => {
         return;
       }
 
+      const { data: { user } } = await supabase.auth.getUser();
+      const hasGoogle =
+        user?.app_metadata?.providers?.includes("google") ||
+        user?.identities?.some((i) => i.provider === "google");
+      if (!hasGoogle) {
+        toast.error("Please log in with Google to sync your Gmail inbox");
+        return;
+      }
+
       const res = await supabase.functions.invoke("sync-gmail", {
         body: {
           provider_token: session.provider_token,
@@ -211,26 +220,12 @@ const InboxPage = () => {
       });
 
       if (res.error) {
-        const msg = (res.error.message || "").toLowerCase();
-        if (
-          msg.includes("reauth_required") ||
-          msg.includes("invalid_grant") ||
-          msg.includes("no gmail token") ||
-          msg.includes("revoked") ||
-          msg.includes("403")
-        ) {
-          toast.error("Lidhja me Gmail ka skaduar ose është revokuar. Hape Settings dhe kliko Connect Gmail për ri-autorizim.");
-        } else {
-          toast.error("Sync failed: " + (res.error.message || "Unknown error"));
-        }
+        toast.error(
+          "Sync failed: " + (res.error.message || "Unknown error")
+        );
         console.error(res.error);
       } else {
         const data = res.data;
-        if (data?.reauth_required || data?.connected === false) {
-          toast.error("Gmail nuk është i lidhur. Shko te Settings dhe kliko Connect Gmail për ri-autorizim.");
-          return;
-        }
-
         if (data.synced > 0) {
           toast.success(`Synced ${data.synced} new emails`);
           await fetchEmails();
@@ -318,24 +313,17 @@ const InboxPage = () => {
   useEffect(() => {
     const autoSync = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const statusRes = await supabase.functions.invoke("sync-gmail", {
-        body: {
-          validate_only: true,
-          provider_token: session?.provider_token,
-          provider_refresh_token: session?.provider_refresh_token,
-        },
-      });
-
-      if (!statusRes.error && statusRes.data?.connected) {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const hasGoogle =
+        user?.app_metadata?.providers?.includes("google") ||
+        user?.identities?.some((i) => i.provider === "google");
+      if (hasGoogle) {
         await syncGmail();
       }
     };
-
     autoSync();
-  }, [syncGmail]);
+  }, []);
 
   const toggleStar = async (emailId: string, currentStarred: boolean) => {
     const { error } = await supabase

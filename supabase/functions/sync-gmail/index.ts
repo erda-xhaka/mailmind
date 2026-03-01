@@ -50,11 +50,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const validateOnly = body?.validate_only === true;
-    const providerToken = body?.provider_token as string | undefined;
-    const providerRefreshToken = body?.provider_refresh_token as string | undefined;
-
     // Check for existing refresh token
     const { data: tokenRow } = await supabaseAdmin
       .from("gmail_tokens")
@@ -82,9 +77,8 @@ Deno.serve(async (req) => {
             grant_type: "refresh_token",
           }),
         });
-
         const tokenData = await tokenRes.json();
-        if (tokenRes.ok && tokenData.access_token) {
+        if (tokenData.access_token) {
           accessToken = tokenData.access_token;
           const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
           await supabaseAdmin
@@ -92,21 +86,6 @@ Deno.serve(async (req) => {
             .update({ access_token: accessToken, token_expires_at: expiresAt, updated_at: new Date().toISOString() })
             .eq("user_id", user.id);
         } else {
-          if (tokenData?.error === "invalid_grant") {
-            await supabaseAdmin.from("gmail_tokens").delete().eq("user_id", user.id);
-            return new Response(
-              JSON.stringify({
-                error: "REAUTH_REQUIRED",
-                message: "Google access has expired or was revoked. Please reconnect Gmail.",
-                reauth_required: true,
-              }),
-              {
-                status: 409,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              }
-            );
-          }
-
           console.error("Token refresh failed:", tokenData);
           return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: tokenData }), {
             status: 400,
@@ -117,10 +96,15 @@ Deno.serve(async (req) => {
         accessToken = tokenRow.access_token;
       }
     } else {
-      // First time: get provider token from OAuth callback session
+      // First time: get the provider token from session
+      // The provider_token is available right after OAuth login
+      const body = await req.json().catch(() => ({}));
+      const providerToken = body.provider_token;
+      const providerRefreshToken = body.provider_refresh_token;
+
       if (!providerToken) {
-        return new Response(JSON.stringify({ connected: false, reauth_required: true, message: "No Gmail token available. Please reconnect Gmail." }), {
-          status: 200,
+        return new Response(JSON.stringify({ error: "No Gmail token available. Please re-login with Google." }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -140,42 +124,8 @@ Deno.serve(async (req) => {
     }
 
     if (!accessToken) {
-      return new Response(JSON.stringify({ connected: false, reauth_required: true, error: "No valid access token" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const profileRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!profileRes.ok) {
-      const profileErr = await profileRes.json().catch(() => ({}));
-      if (profileRes.status === 401 || profileRes.status === 403) {
-        await supabaseAdmin.from("gmail_tokens").delete().eq("user_id", user.id);
-        return new Response(
-          JSON.stringify({
-            error: "REAUTH_REQUIRED",
-            message: "Google access was revoked or expired. Please reconnect Gmail.",
-            reauth_required: true,
-            connected: false,
-          }),
-          {
-            status: 409,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      return new Response(JSON.stringify({ error: "Failed to validate Gmail access", details: profileErr }), {
+      return new Response(JSON.stringify({ error: "No valid access token" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (validateOnly) {
-      return new Response(JSON.stringify({ connected: true, reauth_required: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -186,29 +136,6 @@ Deno.serve(async (req) => {
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const gmailData = await gmailRes.json();
-
-    if (!gmailRes.ok) {
-      if (gmailRes.status === 401 || gmailRes.status === 403) {
-        await supabaseAdmin.from("gmail_tokens").delete().eq("user_id", user.id);
-        return new Response(
-          JSON.stringify({
-            error: "REAUTH_REQUIRED",
-            message: "Google authorization failed. Please reconnect Gmail.",
-            reauth_required: true,
-            connected: false,
-          }),
-          {
-            status: 409,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      return new Response(JSON.stringify({ error: "Failed to fetch Gmail inbox", details: gmailData }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     if (!gmailData.messages || gmailData.messages.length === 0) {
       return new Response(JSON.stringify({ synced: 0, message: "No messages found" }), {
