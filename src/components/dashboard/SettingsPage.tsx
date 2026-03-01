@@ -21,16 +21,21 @@ const SettingsPage = () => {
       if (!user) return;
 
       setEmail(user.email || "");
-      setHasGoogle(
-        user.app_metadata?.providers?.includes("google") ||
-        user.identities?.some((i) => i.provider === "google") || false
-      );
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      const statusRes = await supabase.functions.invoke("sync-gmail", {
+        body: {
+          validate_only: true,
+          provider_token: session?.provider_token,
+          provider_refresh_token: session?.provider_refresh_token,
+        },
+      });
+
+      if (statusRes.error) {
+        setHasGoogle(false);
+      } else {
+        setHasGoogle(Boolean(statusRes.data?.connected));
+      }
 
       if (data) {
         setFullName(data.full_name || "");
