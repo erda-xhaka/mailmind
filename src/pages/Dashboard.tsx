@@ -4,6 +4,7 @@ import InboxPage from "@/components/dashboard/InboxPage";
 import DraftsPage from "@/components/dashboard/DraftsPage";
 import DraftEditPage from "@/components/dashboard/DraftEditPage";
 import SummariesPage from "@/components/dashboard/SummariesPage";
+import SummaryDetailPage from "@/components/dashboard/SummaryDetailPage";
 import CalendarPage from "@/components/dashboard/CalendarPage";
 import DocumentsPage from "@/components/dashboard/DocumentsPage";
 import AnalyticsPage from "@/components/dashboard/AnalyticsPage";
