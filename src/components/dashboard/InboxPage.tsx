@@ -211,9 +211,18 @@ const InboxPage = () => {
       });
 
       if (res.error) {
-        toast.error(
-          "Sync failed: " + (res.error.message || "Unknown error")
-        );
+        const msg = (res.error.message || "").toLowerCase();
+        if (
+          msg.includes("reauth_required") ||
+          msg.includes("invalid_grant") ||
+          msg.includes("no gmail token") ||
+          msg.includes("revoked") ||
+          msg.includes("403")
+        ) {
+          toast.error("Lidhja me Gmail ka skaduar ose është revokuar. Hape Settings dhe kliko Connect Gmail për ri-autorizim.");
+        } else {
+          toast.error("Sync failed: " + (res.error.message || "Unknown error"));
+        }
         console.error(res.error);
       } else {
         const data = res.data;
