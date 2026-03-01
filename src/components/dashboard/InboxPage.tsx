@@ -226,6 +226,11 @@ const InboxPage = () => {
         console.error(res.error);
       } else {
         const data = res.data;
+        if (data?.reauth_required || data?.connected === false) {
+          toast.error("Gmail nuk është i lidhur. Shko te Settings dhe kliko Connect Gmail për ri-autorizim.");
+          return;
+        }
+
         if (data.synced > 0) {
           toast.success(`Synced ${data.synced} new emails`);
           await fetchEmails();
