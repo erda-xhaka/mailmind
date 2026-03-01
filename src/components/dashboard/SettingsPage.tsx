@@ -37,9 +37,15 @@ const SettingsPage = () => {
         setHasGoogle(Boolean(statusRes.data?.connected));
       }
 
-      if (data) {
-        setFullName(data.full_name || "");
-        setAvatarUrl(data.avatar_url || "");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setFullName(profile.full_name || "");
+        setAvatarUrl(profile.avatar_url || "");
       }
       setLoading(false);
     };
