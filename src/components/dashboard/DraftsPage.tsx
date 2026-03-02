@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileEdit, Sparkles, Pencil, Loader2, Trash2, Plus, Search } from "lucide-react";
+import { FileEdit, Sparkles, Loader2, Trash2, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, isYesterday, isToday } from "date-fns";
+import { format, isYesterday, isToday, isThisWeek, isThisMonth, subMonths, isAfter } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,11 +41,15 @@ function formatDate(dateStr: string | null) {
   return format(d, "dd/MM/yyyy");
 }
 
+type DateFilter = "all" | "today" | "week" | "month" | "3months";
+
 const DraftsPage = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "recipient">("date");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [recipientFilter, setRecipientFilter] = useState<string>("all");
   const navigate = useNavigate();
 
   const fetchDrafts = async () => {
@@ -106,8 +110,25 @@ const DraftsPage = () => {
     }
   };
 
+  const uniqueRecipients = useMemo(() => {
+    const recipients = drafts
+      .map((d) => d.to_email)
+      .filter((email): email is string => !!email && email.trim() !== "");
+    return [...new Set(recipients)].sort();
+  }, [drafts]);
+
+  const hasActiveFilters = dateFilter !== "all" || recipientFilter !== "all" || search.trim() !== "";
+
+  const clearFilters = () => {
+    setDateFilter("all");
+    setRecipientFilter("all");
+    setSearch("");
+  };
+
   const filtered = useMemo(() => {
     let result = drafts;
+
+    // Text search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -117,11 +138,39 @@ const DraftsPage = () => {
           (d.reply_text || "").toLowerCase().includes(q)
       );
     }
+
+    // Date filter
+    if (dateFilter !== "all") {
+      result = result.filter((d) => {
+        if (!d.created_at) return false;
+        const date = new Date(d.created_at);
+        switch (dateFilter) {
+          case "today":
+            return isToday(date);
+          case "week":
+            return isThisWeek(date, { weekStartsOn: 1 });
+          case "month":
+            return isThisMonth(date);
+          case "3months":
+            return isAfter(date, subMonths(new Date(), 3));
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Recipient filter
+    if (recipientFilter !== "all") {
+      result = result.filter((d) => d.to_email === recipientFilter);
+    }
+
+    // Sort
     if (sortBy === "recipient") {
       result = [...result].sort((a, b) => (a.to_email || "").localeCompare(b.to_email || ""));
     }
+
     return result;
-  }, [drafts, search, sortBy]);
+  }, [drafts, search, sortBy, dateFilter, recipientFilter]);
 
   if (loading) {
     return (
@@ -144,8 +193,8 @@ const DraftsPage = () => {
       </div>
 
       {drafts.length > 0 && (
-        <div className="flex gap-2 mb-4">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-wrap gap-2 mb-4 items-center">
+          <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search drafts..."
@@ -154,6 +203,31 @@ const DraftsPage = () => {
               className="pl-9 bg-muted/50 border-border/50"
             />
           </div>
+          <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
+            <SelectTrigger className="w-[150px] bg-muted/50 border-border/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All dates</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This week</SelectItem>
+              <SelectItem value="month">This month</SelectItem>
+              <SelectItem value="3months">Last 3 months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={recipientFilter} onValueChange={setRecipientFilter}>
+            <SelectTrigger className="w-[180px] bg-muted/50 border-border/50">
+              <SelectValue placeholder="Filter by recipient" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All recipients</SelectItem>
+              {uniqueRecipients.map((email) => (
+                <SelectItem key={email} value={email}>
+                  {email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "recipient")}>
             <SelectTrigger className="w-[140px] bg-muted/50 border-border/50">
               <SelectValue />
@@ -163,6 +237,11 @@ const DraftsPage = () => {
               <SelectItem value="recipient">By Recipient</SelectItem>
             </SelectContent>
           </Select>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4 mr-1" /> Clear filters
+            </Button>
+          )}
         </div>
       )}
 
@@ -170,7 +249,7 @@ const DraftsPage = () => {
         <div className="glass-card p-8 text-center">
           <FileEdit className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground">
-            {search ? "No drafts match your search." : "No drafts yet. Use the Reply Generator to create AI-powered replies."}
+            {hasActiveFilters ? "No drafts match your filters." : "No drafts yet. Use the Reply Generator to create AI-powered replies."}
           </p>
         </div>
       ) : (
