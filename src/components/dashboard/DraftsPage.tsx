@@ -223,15 +223,6 @@ const DraftsPage = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "recipient")}>
-            <SelectTrigger className="w-[140px] bg-muted/50 border-border/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">By Date</SelectItem>
-              <SelectItem value="recipient">By Recipient</SelectItem>
-            </SelectContent>
-          </Select>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4 mr-1" /> Clear filters
