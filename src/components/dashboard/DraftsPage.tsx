@@ -47,7 +47,7 @@ const DraftsPage = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "recipient">("date");
+  
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [recipientFilter, setRecipientFilter] = useState<string>("all");
   const navigate = useNavigate();
@@ -164,13 +164,8 @@ const DraftsPage = () => {
       result = result.filter((d) => d.to_email === recipientFilter);
     }
 
-    // Sort
-    if (sortBy === "recipient") {
-      result = [...result].sort((a, b) => (a.to_email || "").localeCompare(b.to_email || ""));
-    }
-
     return result;
-  }, [drafts, search, sortBy, dateFilter, recipientFilter]);
+  }, [drafts, search, dateFilter, recipientFilter]);
 
   if (loading) {
     return (
@@ -226,15 +221,6 @@ const DraftsPage = () => {
                   {email}
                 </SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "date" | "recipient")}>
-            <SelectTrigger className="w-[140px] bg-muted/50 border-border/50">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">By Date</SelectItem>
-              <SelectItem value="recipient">By Recipient</SelectItem>
             </SelectContent>
           </Select>
           {hasActiveFilters && (
