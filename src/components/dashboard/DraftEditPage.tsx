@@ -37,8 +37,6 @@ const DraftEditPage = () => {
   const [issues, setIssues] = useState<ProofreadIssue[]>([]);
   const [correctedText, setCorrectedText] = useState("");
   const [showProofread, setShowProofread] = useState(false);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const fetchDraft = async () => {
