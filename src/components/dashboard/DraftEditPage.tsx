@@ -108,24 +108,6 @@ const DraftEditPage = () => {
     toast.success("All corrections applied");
   };
 
-  const handleSend = async () => {
-    setSending(true);
-    try {
-      // Save latest changes first
-      await supabase
-        .from("ai_replies")
-        .update({ reply_text: message, to_email: toEmail, subject } as any)
-        .eq("id", draftId!);
-      
-      toast.success("Email sent successfully!");
-      setSendDialogOpen(false);
-      navigate("/dashboard/drafts");
-    } catch {
-      toast.error("Failed to send email");
-    } finally {
-      setSending(false);
-    }
-  };
 
   if (loading) {
     return (
