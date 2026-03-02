@@ -47,7 +47,7 @@ const DraftsPage = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "recipient">("date");
+  
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [recipientFilter, setRecipientFilter] = useState<string>("all");
   const navigate = useNavigate();
