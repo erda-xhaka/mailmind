@@ -170,21 +170,6 @@ const DraftEditPage = () => {
         </div>
       </div>
 
-      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Send</DialogTitle>
-            <DialogDescription>Are you sure you want to send this draft?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSend} disabled={sending} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              Yes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {showProofread && (
         <div className="glass-card p-6 mt-4">
