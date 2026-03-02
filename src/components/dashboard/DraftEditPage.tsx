@@ -167,10 +167,6 @@ const DraftEditPage = () => {
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Save Changes
           </Button>
-          <Button onClick={() => setSendDialogOpen(true)} disabled={!toEmail.trim() || !message.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <Send className="h-4 w-4 mr-2" />
-            Send
-          </Button>
         </div>
       </div>
 
