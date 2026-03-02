@@ -164,13 +164,8 @@ const DraftsPage = () => {
       result = result.filter((d) => d.to_email === recipientFilter);
     }
 
-    // Sort
-    if (sortBy === "recipient") {
-      result = [...result].sort((a, b) => (a.to_email || "").localeCompare(b.to_email || ""));
-    }
-
     return result;
-  }, [drafts, search, sortBy, dateFilter, recipientFilter]);
+  }, [drafts, search, dateFilter, recipientFilter]);
 
   if (loading) {
     return (
