@@ -52,6 +52,48 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string
+          id: string
+          location: string | null
+          participants: Json | null
+          start_date: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          location?: string | null
+          participants?: Json | null
+          start_date: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          location?: string | null
+          participants?: Json | null
+          start_date?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string | null
