@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell, Mail, LogOut } from "lucide-react";
+import { User, Mail, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -144,13 +144,6 @@ const SettingsPage = () => {
           ) : (
             <Button variant="outline" onClick={handleGoogleConnect}>Connect Gmail</Button>
           )}
-        </div>
-
-        <div className="glass-card p-6">
-          <h3 className="font-heading font-semibold flex items-center gap-2 mb-4">
-            <Bell className="h-4 w-4 text-primary" /> Notifications
-          </h3>
-          <p className="text-sm text-muted-foreground">Notification preferences coming soon.</p>
         </div>
 
         <div className="flex gap-3">
