@@ -179,22 +179,6 @@ const DashboardLayout = () => {
                 <Menu className="h-5 w-5" />
               </Button>
             )}
-            <div className="relative w-full max-w-xs md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Kërko emaile, dokumente..."
-                className="pl-9 bg-muted/50 border-border/50 text-sm"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-            </Button>
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-medium text-primary">
-              {userInitial}
-            </div>
           </div>
         </header>
 
