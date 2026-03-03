@@ -35,18 +35,8 @@ const navSections = [
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [userInitial, setUserInitial] = useState("U");
   const location = useLocation();
   const isMobile = useIsMobile();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const name = user.user_metadata?.full_name || user.email || "";
-        setUserInitial((name[0] || "U").toUpperCase());
-      }
-    });
-  }, []);
 
   // Close mobile sidebar on navigation
   useEffect(() => {
