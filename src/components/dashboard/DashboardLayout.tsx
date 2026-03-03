@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Inbox, FileEdit, FileText, Calendar, BarChart3,
   Settings, Bot, Zap, MessageSquare, PanelLeftClose, PanelLeft,
-  Search, Bell, Menu, X
+  Menu, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
