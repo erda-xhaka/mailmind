@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Bell, Mail, LogOut } from "lucide-react";
+import { User, Mail, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
