@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { streamChat, callAI } from "@/lib/streamChat";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import mammoth from "mammoth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
