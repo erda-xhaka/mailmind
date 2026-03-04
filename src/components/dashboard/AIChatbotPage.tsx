@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { streamChat, callAI } from "@/lib/streamChat";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import mammoth from "mammoth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -193,8 +194,19 @@ const AIChatbotPage = () => {
       let text = "";
       if (file.type === "text/plain") {
         text = await file.text();
+      } else if (
+        file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        file.type === "application/msword"
+      ) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          text = result.value || `[Dokumenti Word "${file.name}" nuk kishte tekst të nxjerrshëm.]`;
+        } catch {
+          text = `[Gabim gjatë nxjerrjes së tekstit nga "${file.name}".]`;
+        }
       } else {
-        text = `[Dokument i ngarkuar: ${file.name} — Formati ${file.type === "application/pdf" ? "PDF" : "Word"}. Përmbajtja nuk mund të ekstraktohet automatikisht në browser. Përdoruesi mund të bëjë pyetje rreth këtij dokumenti.]`;
+        text = `[Dokument i ngarkuar: ${file.name} — Formati PDF. Përmbajtja nuk mund të ekstraktohet automatikisht në browser.]`;
       }
 
       const uploaded: UploadedFile = {
