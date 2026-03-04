@@ -68,6 +68,11 @@ Return a JSON array where each element is: { "id": "email_id", "category": "one 
         userContent = JSON.stringify(body.emailsToCateg);
         break;
 
+      case "chat-single":
+        systemPrompt = "Ti je një asistent i dobishëm. Përgjigju gjithmonë në gjuhën shqipe.";
+        userContent = body.prompt || "";
+        break;
+
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {
           status: 400,
