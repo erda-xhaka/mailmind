@@ -327,9 +327,13 @@ const AIChatbotPage = () => {
         {uploadedFiles.length > 0 && (
           <div className="flex gap-2 mt-2 flex-wrap">
             {uploadedFiles.map((f, i) => (
-              <span key={i} className="category-badge bg-primary/10 text-primary flex items-center gap-1">
+              <button
+                key={i}
+                onClick={() => setViewingFile(f)}
+                className="category-badge bg-primary/10 text-primary flex items-center gap-1 cursor-pointer hover:bg-primary/20 transition-colors"
+              >
                 <FileText className="h-3 w-3" /> {f.name}
-              </span>
+              </button>
             ))}
           </div>
         )}
