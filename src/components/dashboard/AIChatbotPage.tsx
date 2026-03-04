@@ -266,13 +266,9 @@ const AIChatbotPage = () => {
                   </div>
                 </button>
               )}
-              {msg.role === "assistant" ? (
-                <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              ) : (
-                <ReactMarkdown className="prose prose-invert prose-sm max-w-none">{msg.content}</ReactMarkdown>
-              )}
+              <div className="prose prose-invert prose-sm max-w-none">
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
             </div>
             {msg.role === "user" && (
               <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
