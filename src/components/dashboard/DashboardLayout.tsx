@@ -26,8 +26,6 @@ const navSections = [
     label: "Mjetet AI",
     items: [
       { title: "Chat AI", url: "/dashboard/ai-chat", icon: Bot },
-      { title: "Analizues Email", url: "/dashboard/email-parser", icon: MessageSquare },
-      { title: "Gjeneruesi Përgjigjeve", url: "/dashboard/reply-generator", icon: Zap },
     ],
   },
 ];

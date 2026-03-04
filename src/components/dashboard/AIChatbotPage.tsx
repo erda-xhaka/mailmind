@@ -233,11 +233,11 @@ const AIChatbotPage = () => {
         <p className="text-muted-foreground text-sm mt-1">Qendra juaj për të gjitha veprimet AI</p>
         {/* Quick Action Buttons */}
         <div className="flex gap-3 mt-4">
-          <Button variant="outline" className="gap-2" onClick={() => setParserOpen(true)}>
-            <Mail className="h-4 w-4" /> Analizo Email
+          <Button variant="outline" size="lg" className="gap-2 text-base px-6 py-3 h-auto" onClick={() => setParserOpen(true)}>
+            <Mail className="h-5 w-5" /> 📧 Analizo Email
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setReplyOpen(true)}>
-            <PenLine className="h-4 w-4" /> Gjenero Përgjigje
+          <Button variant="outline" size="lg" className="gap-2 text-base px-6 py-3 h-auto" onClick={() => setReplyOpen(true)}>
+            <PenLine className="h-5 w-5" /> ✍️ Gjenero Përgjigje
           </Button>
         </div>
       </div>
@@ -327,9 +327,13 @@ const AIChatbotPage = () => {
         {uploadedFiles.length > 0 && (
           <div className="flex gap-2 mt-2 flex-wrap">
             {uploadedFiles.map((f, i) => (
-              <span key={i} className="category-badge bg-primary/10 text-primary flex items-center gap-1">
+              <button
+                key={i}
+                onClick={() => setViewingFile(f)}
+                className="category-badge bg-primary/10 text-primary flex items-center gap-1 cursor-pointer hover:bg-primary/20 transition-colors"
+              >
                 <FileText className="h-3 w-3" /> {f.name}
-              </span>
+              </button>
             ))}
           </div>
         )}
