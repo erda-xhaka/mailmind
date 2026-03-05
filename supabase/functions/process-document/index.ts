@@ -41,17 +41,6 @@ Deno.serve(async (req) => {
     // Service role client for admin operations
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Ensure bucket exists
-    const { data: buckets } = await adminClient.storage.listBuckets();
-    const bucketExists = buckets?.some((b: { name: string }) => b.name === "chat-documents");
-    if (!bucketExists) {
-      await adminClient.storage.createBucket("chat-documents", {
-        public: false,
-        fileSizeLimit: 52428800,
-      });
-      console.log("Bucket 'chat-documents' created.");
-    }
-
     const { filePath, fileType, documentId } = await req.json();
 
     if (!filePath || !documentId) {
@@ -63,7 +52,7 @@ Deno.serve(async (req) => {
 
     // Download file from storage
     const { data: fileData, error: downloadError } = await adminClient.storage
-      .from("chat-documents")
+      .from("documents")
       .download(filePath);
 
     if (downloadError || !fileData) {
