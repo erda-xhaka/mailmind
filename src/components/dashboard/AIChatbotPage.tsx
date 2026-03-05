@@ -190,7 +190,21 @@ const AIChatbotPage = () => {
         .from("chat-documents")
         .getPublicUrl(filePath);
 
-      // Extract text
+      // Save document record to DB
+      const { data: docRecord, error: dbError } = await supabase
+        .from("documents")
+        .insert({
+          name: file.name,
+          file_url: urlData.publicUrl,
+          user_id: user.id,
+          file_size: file.size,
+          file_type: file.type,
+        } as any)
+        .select()
+        .single();
+      if (dbError) throw dbError;
+
+      // Extract text locally first for immediate chat context
       let text = "";
       if (file.type === "text/plain") {
         text = await file.text();
@@ -206,7 +220,19 @@ const AIChatbotPage = () => {
           text = `[Gabim gjatë nxjerrjes së tekstit nga "${file.name}".]`;
         }
       } else {
-        text = `[Dokument i ngarkuar: ${file.name} — Formati PDF. Përmbajtja nuk mund të ekstraktohet automatikisht në browser.]`;
+        text = `[Dokument i ngarkuar: ${file.name} — Formati PDF.]`;
+      }
+
+      // Call edge function to process and save extracted text to DB
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token && docRecord) {
+        supabase.functions.invoke("process-document", {
+          body: {
+            filePath,
+            fileType: file.type,
+            documentId: (docRecord as any).id,
+          },
+        }).catch(err => console.error("Process document error:", err));
       }
 
       const uploaded: UploadedFile = {
