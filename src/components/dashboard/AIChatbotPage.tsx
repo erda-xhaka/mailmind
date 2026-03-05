@@ -182,12 +182,12 @@ const AIChatbotPage = () => {
 
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage
-        .from("chat-documents")
+        .from("documents")
         .upload(filePath, file);
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("chat-documents")
+        .from("documents")
         .getPublicUrl(filePath);
 
       // Save document record to DB
