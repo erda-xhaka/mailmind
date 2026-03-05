@@ -1,0 +1,4 @@
+ALTER TABLE public.documents 
+ADD COLUMN IF NOT EXISTS extracted_text TEXT,
+ADD COLUMN IF NOT EXISTS file_size BIGINT,
+ADD COLUMN IF NOT EXISTS file_type TEXT;
