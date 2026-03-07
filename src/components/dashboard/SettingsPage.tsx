@@ -52,9 +52,9 @@ const SettingsPage = () => {
       .eq("id", user.id);
 
     if (error) {
-      toast.error("Failed to save profile");
+      toast.error("Dështoi ruajtja e profilit");
     } else {
-      toast.success("Profile saved successfully");
+      toast.success("Profili u ruajt me sukses");
     }
     setSaving(false);
   };
@@ -74,10 +74,10 @@ const SettingsPage = () => {
   const handleDisconnectGmail = async () => {
     const { error } = await supabase.functions.invoke("disconnect-gmail");
     if (error) {
-      toast.error("Failed to disconnect Gmail");
+      toast.error("Dështoi shkëputja e Gmail-it");
     } else {
       setHasGoogle(false);
-      toast.success("Gmail disconnected successfully");
+      toast.success("Gmail u shkëput me sukses");
     }
   };
 
@@ -90,8 +90,8 @@ const SettingsPage = () => {
     return (
       <div className="max-w-2xl">
         <div className="mb-6">
-          <h1 className="font-heading text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground text-sm mt-1">Loading...</p>
+          <h1 className="font-heading text-2xl font-bold">Cilësimet</h1>
+          <p className="text-muted-foreground text-sm mt-1">Duke ngarkuar...</p>
         </div>
       </div>
     );
@@ -100,18 +100,18 @@ const SettingsPage = () => {
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage your account and preferences</p>
+        <h1 className="font-heading text-2xl font-bold">Cilësimet</h1>
+        <p className="text-muted-foreground text-sm mt-1">Menaxhoni llogarinë dhe preferencat tuaja</p>
       </div>
 
       <div className="space-y-6">
         <div className="glass-card p-6">
           <h3 className="font-heading font-semibold flex items-center gap-2 mb-4">
-            <User className="h-4 w-4 text-primary" /> Profile
+            <User className="h-4 w-4 text-primary" /> Profili
           </h3>
           <div className="grid gap-4">
             <div>
-              <label className="text-sm text-muted-foreground">Full Name</label>
+              <label className="text-sm text-muted-foreground">Emri i Plotë</label>
               <Input
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -131,27 +131,27 @@ const SettingsPage = () => {
 
         <div className="glass-card p-6">
           <h3 className="font-heading font-semibold flex items-center gap-2 mb-4">
-            <Mail className="h-4 w-4 text-primary" /> Email Integration
+            <Mail className="h-4 w-4 text-primary" /> Integrimi i Email-it
           </h3>
-          <p className="text-sm text-muted-foreground mb-3">Connect your Gmail for AI processing</p>
+          <p className="text-sm text-muted-foreground mb-3">Lidhni Gmail-in tuaj për përpunim me AI</p>
           {hasGoogle ? (
             <div className="flex items-center gap-3">
-              <span className="category-badge bg-category-personal/20 text-category-personal">✓ Gmail Connected</span>
+              <span className="category-badge bg-category-personal/20 text-category-personal">✓ Gmail i Lidhur</span>
               <Button variant="destructive" size="sm" onClick={handleDisconnectGmail}>
-                Disconnect
+                Shkëput
               </Button>
             </div>
           ) : (
-            <Button variant="outline" onClick={handleGoogleConnect}>Connect Gmail</Button>
+            <Button variant="outline" onClick={handleGoogleConnect}>Lidh Gmail-in</Button>
           )}
         </div>
 
         <div className="flex gap-3">
           <Button className="flex-1" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Duke ruajtur..." : "Ruaj Ndryshimet"}
           </Button>
           <Button variant="destructive" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" /> Log Out
+            <LogOut className="h-4 w-4 mr-2" /> Dil
           </Button>
         </div>
       </div>

@@ -20,15 +20,13 @@ const AnalyticsPage = () => {
         return;
       }
 
-      // Stats
       const total = emails.length;
       const unread = emails.filter((e) => !e.is_read).length;
       const starred = emails.filter((e) => e.is_starred).length;
       const read = emails.filter((e) => e.is_read).length;
       setStats({ total, unread, starred, read });
 
-      // Weekly data - last 7 days
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const days = ["Die", "Hën", "Mar", "Mër", "Enj", "Pre", "Sht"];
       const weekly: Record<string, { emails: number; read: number }> = {};
       for (const d of days) weekly[d] = { emails: 0, read: 0 };
 
@@ -40,10 +38,9 @@ const AnalyticsPage = () => {
       }
       setWeeklyData(days.map((d) => ({ day: d, emails: weekly[d].emails, read: weekly[d].read })));
 
-      // Category data
       const cats: Record<string, number> = {};
       for (const e of emails) {
-        const cat = e.category || "uncategorized";
+        const cat = e.category || "pa kategori";
         cats[cat] = (cats[cat] || 0) + 1;
       }
       setCategoryData(Object.entries(cats).map(([name, count]) => ({ name, count })));
@@ -56,10 +53,10 @@ const AnalyticsPage = () => {
   const responseRate = stats.total > 0 ? Math.round((stats.read / stats.total) * 100) : 0;
 
   const statCards = [
-    { icon: Mail, label: "Total Emails", value: stats.total.toString() },
-    { icon: Zap, label: "Unread", value: stats.unread.toString() },
-    { icon: Clock, label: "Starred", value: stats.starred.toString() },
-    { icon: TrendingUp, label: "Read Rate", value: `${responseRate}%` },
+    { icon: Mail, label: "Emaile Totale", value: stats.total.toString() },
+    { icon: Zap, label: "Të Palexuara", value: stats.unread.toString() },
+    { icon: Clock, label: "Me Yll", value: stats.starred.toString() },
+    { icon: TrendingUp, label: "Shkalla e Leximit", value: `${responseRate}%` },
   ];
 
   if (loading) {
@@ -73,8 +70,8 @@ const AnalyticsPage = () => {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold">Analytics</h1>
-        <p className="text-muted-foreground text-sm mt-1">Your real email insights</p>
+        <h1 className="font-heading text-2xl font-bold">Analitika</h1>
+        <p className="text-muted-foreground text-sm mt-1">Statistikat reale të emaileve tuaja</p>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
@@ -96,12 +93,12 @@ const AnalyticsPage = () => {
       {stats.total === 0 ? (
         <div className="glass-card p-8 text-center">
           <BarChart3 className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-          <p className="text-muted-foreground">No email data yet. Sync your Gmail to see analytics.</p>
+          <p className="text-muted-foreground">Nuk ka të dhëna emaili ende. Sinkronizoni Gmail-in tuaj për të parë analitikën.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
           <div className="glass-card p-5">
-            <h3 className="font-heading font-semibold mb-4">Email Volume by Day</h3>
+            <h3 className="font-heading font-semibold mb-4">Vëllimi i Emaileve sipas Ditës</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={weeklyData}>
                 <XAxis dataKey="day" stroke="hsl(215 20% 55%)" fontSize={12} tickLine={false} axisLine={false} />
@@ -113,7 +110,7 @@ const AnalyticsPage = () => {
             </ResponsiveContainer>
           </div>
           <div className="glass-card p-5">
-            <h3 className="font-heading font-semibold mb-4">By Category</h3>
+            <h3 className="font-heading font-semibold mb-4">Sipas Kategorisë</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoryData} layout="vertical">
                 <XAxis type="number" stroke="hsl(215 20% 55%)" fontSize={12} tickLine={false} axisLine={false} />

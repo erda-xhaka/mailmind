@@ -35,7 +35,7 @@ interface ParsedResult {
   priority: string;
 }
 
-const tones = ["Professional", "Friendly", "Concise", "Formal"];
+const tones = ["Profesional", "Miqësor", "Konciz", "Formal"];
 
 const formatFileSize = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -52,20 +52,17 @@ const AIChatbotPage = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Email Parser state
   const [parserOpen, setParserOpen] = useState(false);
   const [parserText, setParserText] = useState("");
   const [parserLoading, setParserLoading] = useState(false);
   const [parsed, setParsed] = useState<ParsedResult | null>(null);
 
-  // Reply Generator state
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyEmail, setReplyEmail] = useState("");
-  const [replyTone, setReplyTone] = useState("Professional");
+  const [replyTone, setReplyTone] = useState("Profesional");
   const [replyResult, setReplyResult] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
 
-  // Uploaded files context
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [viewingFile, setViewingFile] = useState<UploadedFile | null>(null);
 
@@ -80,7 +77,6 @@ const AIChatbotPage = () => {
     setInput("");
     setIsLoading(true);
 
-    // Build context with uploaded files
     const contextMessages = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
     if (uploadedFiles.length > 0) {
       const fileContext = uploadedFiles.map(f => `[Dokument: ${f.name}]\n${f.text}`).join("\n\n");
@@ -103,14 +99,10 @@ const AIChatbotPage = () => {
       messages: contextMessages,
       onDelta: upsertAssistant,
       onDone: () => setIsLoading(false),
-      onError: (err) => {
-        toast.error(err.message);
-        setIsLoading(false);
-      },
+      onError: (err) => { toast.error(err.message); setIsLoading(false); },
     });
   };
 
-  // Email Parser
   const handleParse = async () => {
     if (!parserText.trim()) return;
     setParserLoading(true);
@@ -119,7 +111,6 @@ const AIChatbotPage = () => {
       const { result } = await callAI("parse", { emailContent: parserText });
       const cleaned = result.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const data = JSON.parse(cleaned);
-      // Generate summary
       const { result: summaryResult } = await callAI("chat-single", {
         prompt: `Përmbledh këtë email në 2-3 fjali të shkurtra në shqip:\n\n${parserText}`,
       });
@@ -132,7 +123,6 @@ const AIChatbotPage = () => {
     }
   };
 
-  // Reply Generator
   const generateReply = async () => {
     if (!replyEmail.trim()) return;
     setReplyLoading(true);
@@ -143,11 +133,9 @@ const AIChatbotPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from("ai_replies").insert({
-          user_id: user.id,
-          reply_text: result,
-          subject: `Re: ${replyTone} reply`,
+          user_id: user.id, reply_text: result, subject: `Re: Përgjigje ${replyTone}`,
         } as any);
-        toast.success("Draft u ruajt me sukses");
+        toast.success("Draft-i u ruajt me sukses");
       }
     } catch (err: any) {
       toast.error(err.message || "Gabim gjatë gjenerimit");
@@ -156,7 +144,6 @@ const AIChatbotPage = () => {
     }
   };
 
-  // File Upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -181,30 +168,17 @@ const AIChatbotPage = () => {
       if (!user) { toast.error("Duhet të jeni i kyçur"); return; }
 
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("documents")
-        .upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from("documents").upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("documents")
-        .getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
 
-      // Save document record to DB
       const { data: docRecord, error: dbError } = await supabase
         .from("documents")
-        .insert({
-          name: file.name,
-          file_url: urlData.publicUrl,
-          user_id: user.id,
-          file_size: file.size,
-          file_type: file.type,
-        } as any)
-        .select()
-        .single();
+        .insert({ name: file.name, file_url: urlData.publicUrl, user_id: user.id, file_size: file.size, file_type: file.type } as any)
+        .select().single();
       if (dbError) throw dbError;
 
-      // Extract text locally first for immediate chat context
       let text = "";
       if (file.type === "text/plain") {
         text = await file.text();
@@ -223,38 +197,23 @@ const AIChatbotPage = () => {
         text = `[Dokument i ngarkuar: ${file.name} — Formati PDF.]`;
       }
 
-      // Call edge function to process and save extracted text to DB
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token && docRecord) {
         supabase.functions.invoke("process-document", {
-          body: {
-            filePath,
-            fileType: file.type,
-            documentId: (docRecord as any).id,
-          },
-        }).catch(err => console.error("Process document error:", err));
+          body: { filePath, fileType: file.type, documentId: (docRecord as any).id },
+        }).catch(err => console.error("Gabim përpunimi dokumenti:", err));
       }
 
       const uploaded: UploadedFile = {
-        name: file.name,
-        size: file.size,
-        url: urlData.publicUrl,
-        text: text.slice(0, 8000),
-        uploadedAt: new Date().toISOString(),
+        name: file.name, size: file.size, url: urlData.publicUrl,
+        text: text.slice(0, 8000), uploadedAt: new Date().toISOString(),
       };
 
       setUploadedFiles((prev) => [...prev, uploaded]);
       setMessages((prev) => [
         ...prev,
-        {
-          role: "user",
-          content: `📎 Ngarkova dokumentin: **${file.name}**`,
-          file: uploaded,
-        },
-        {
-          role: "assistant",
-          content: `Dokumenti "${file.name}" u ngarkua me sukses! Mund të më bëni pyetje rreth përmbajtjes së tij.`,
-        },
+        { role: "user", content: `📎 Ngarkova dokumentin: **${file.name}**`, file: uploaded },
+        { role: "assistant", content: `Dokumenti "${file.name}" u ngarkua me sukses! Mund të më bëni pyetje rreth përmbajtjes së tij.` },
       ]);
       toast.success("Dokumenti u ngarkua me sukses");
     } catch (err: any) {
@@ -265,11 +224,9 @@ const AIChatbotPage = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] -m-6">
-      {/* Header */}
       <div className="p-6 border-b border-border/50">
-        <h1 className="font-heading text-2xl font-bold">AI Assistant</h1>
+        <h1 className="font-heading text-2xl font-bold">Asistenti AI</h1>
         <p className="text-muted-foreground text-sm mt-1">Qendra juaj për të gjitha veprimet AI</p>
-        {/* Quick Action Buttons */}
         <div className="flex gap-3 mt-4">
           <Button variant="outline" size="lg" className="gap-2 text-base px-6 py-3 h-auto" onClick={() => setParserOpen(true)}>
             <Mail className="h-5 w-5" /> 📧 Analizo Email
@@ -280,7 +237,6 @@ const AIChatbotPage = () => {
         </div>
       </div>
 
-      {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}>
@@ -328,46 +284,31 @@ const AIChatbotPage = () => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="p-4 border-t border-border/50">
         <div className="flex gap-2 items-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.txt"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
+          <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden" onChange={handleFileUpload} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <Plus className="h-5 w-5" />
-              </Button>
+              <Button variant="ghost" size="icon" className="shrink-0"><Plus className="h-5 w-5" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <Paperclip className="h-4 w-4 mr-2" /> Upload Document
+                <Paperclip className="h-4 w-4 mr-2" /> Ngarko Dokument
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={input} onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Pyet rreth emaileve tuaja..."
-            className="bg-muted/50 border-border/50"
-            disabled={isLoading}
+            placeholder="Pyetni rreth emaileve tuaja..."
+            className="bg-muted/50 border-border/50" disabled={isLoading}
           />
-          <Button onClick={handleSend} size="icon" disabled={isLoading}>
-            <Send className="h-4 w-4" />
-          </Button>
+          <Button onClick={handleSend} size="icon" disabled={isLoading}><Send className="h-4 w-4" /></Button>
         </div>
         {uploadedFiles.length > 0 && (
           <div className="flex gap-2 mt-2 flex-wrap">
             {uploadedFiles.map((f, i) => (
-              <button
-                key={i}
-                onClick={() => setViewingFile(f)}
+              <button key={i} onClick={() => setViewingFile(f)}
                 className="category-badge bg-primary/10 text-primary flex items-center gap-1 cursor-pointer hover:bg-primary/20 transition-colors"
               >
                 <FileText className="h-3 w-3" /> {f.name}
@@ -377,12 +318,12 @@ const AIChatbotPage = () => {
         )}
       </div>
 
-      {/* Email Parser Modal */}
+      {/* Analizuesi i Emaileve */}
       <Dialog open={parserOpen} onOpenChange={setParserOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" /> Email Parser
+              <Mail className="h-5 w-5 text-primary" /> Analizuesi i Emaileve
             </DialogTitle>
             <DialogDescription>Ngjitni emailin për të nxjerrë informacione kyçe</DialogDescription>
           </DialogHeader>
@@ -395,7 +336,7 @@ const AIChatbotPage = () => {
             />
             <Button onClick={handleParse} disabled={!parserText.trim() || parserLoading} className="w-full">
               {parserLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-              {parserLoading ? "Duke analizuar..." : "Parse Email"}
+              {parserLoading ? "Duke analizuar..." : "Analizo Emailin"}
             </Button>
             {parsed && (
               <div className="space-y-3 glass-card p-4 rounded-lg">
@@ -406,18 +347,18 @@ const AIChatbotPage = () => {
                   </div>
                 )}
                 <div className="space-y-2 text-sm">
-                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Sender:</span><span>{parsed.sender}</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Intent:</span><span className="text-primary">{parsed.intent}</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Sentiment:</span><span>{parsed.sentiment}</span></div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Priority:</span>
+                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Dërguesi:</span><span>{parsed.sender}</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Qëllimi:</span><span className="text-primary">{parsed.intent}</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Sentimenti:</span><span>{parsed.sentiment}</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Prioriteti:</span>
                     <span className={`category-badge ${parsed.priority === "High" ? "bg-destructive/20 text-destructive" : parsed.priority === "Medium" ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>
                       {parsed.priority}
                     </span>
                   </div>
-                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Key Dates:</span>
+                  <div className="flex gap-2"><span className="text-muted-foreground w-28 shrink-0">Data Kyçe:</span>
                     <span>{parsed.key_dates?.length ? parsed.key_dates.join(", ") : "Asnjë"}</span>
                   </div>
-                  <div className="flex gap-2 items-start"><span className="text-muted-foreground w-28 shrink-0">Action Items:</span>
+                  <div className="flex gap-2 items-start"><span className="text-muted-foreground w-28 shrink-0">Veprime:</span>
                     <div>{parsed.action_items?.length ? (
                       <ul className="list-disc list-inside space-y-1">
                         {parsed.action_items.map((item, i) => <li key={i}>{item}</li>)}
@@ -431,18 +372,18 @@ const AIChatbotPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Reply Generator Modal */}
+      {/* Gjeneruesi i Përgjigjeve */}
       <Dialog open={replyOpen} onOpenChange={setReplyOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PenLine className="h-5 w-5 text-primary" /> Reply Generator
+              <PenLine className="h-5 w-5 text-primary" /> Gjeneruesi i Përgjigjeve
             </DialogTitle>
             <DialogDescription>Gjeneroni përgjigje me AI për emailet tuaja</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-muted-foreground">Email Origjinal</label>
+              <label className="text-sm text-muted-foreground">Email-i Origjinal</label>
               <Textarea
                 value={replyEmail}
                 onChange={(e) => { setReplyEmail(e.target.value); setReplyResult(""); }}
@@ -485,7 +426,7 @@ const AIChatbotPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* File Viewer Modal */}
+      {/* Shikuesi i Skedarëve */}
       <Dialog open={!!viewingFile} onOpenChange={() => setViewingFile(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>

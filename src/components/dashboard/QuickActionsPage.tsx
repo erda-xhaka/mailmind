@@ -11,74 +11,59 @@ const QuickActionsPage = () => {
     try {
       switch (actionKey) {
         case "archive-read": {
-          const { error } = await supabase
-            .from("emails")
-            .delete()
-            .eq("is_read", true);
+          const { error } = await supabase.from("emails").delete().eq("is_read", true);
           if (error) throw error;
-          toast.success("Read emails archived (deleted)");
+          toast.success("Emailet e lexuara u arkivuan (fshirë)");
           break;
         }
         case "star-important": {
-          const { error } = await supabase
-            .from("emails")
-            .update({ is_starred: true })
-            .eq("category", "important");
+          const { error } = await supabase.from("emails").update({ is_starred: true }).eq("category", "important");
           if (error) throw error;
-          toast.success("Important emails starred");
+          toast.success("Emailet e rëndësishme u shënuan me yll");
           break;
         }
         case "mark-all-read": {
-          const { error } = await supabase
-            .from("emails")
-            .update({ is_read: true })
-            .eq("is_read", false);
+          const { error } = await supabase.from("emails").update({ is_read: true }).eq("is_read", false);
           if (error) throw error;
-          toast.success("All emails marked as read");
+          toast.success("Të gjitha emailet u shënuan si të lexuara");
           break;
         }
         case "clean-spam": {
-          const { error } = await supabase
-            .from("emails")
-            .delete()
-            .eq("category", "spam");
+          const { error } = await supabase.from("emails").delete().eq("category", "spam");
           if (error) throw error;
-          toast.success("Spam emails cleaned");
+          toast.success("Emailet spam u pastruan");
           break;
         }
         case "unstar-all": {
-          const { error } = await supabase
-            .from("emails")
-            .update({ is_starred: false })
-            .eq("is_starred", true);
+          const { error } = await supabase.from("emails").update({ is_starred: false }).eq("is_starred", true);
           if (error) throw error;
-          toast.success("All emails unstarred");
+          toast.success("Të gjitha emailet u hoqën nga ylli");
           break;
         }
         default:
-          toast.info("This action is coming soon");
+          toast.info("Ky veprim do të vijë së shpejti");
       }
     } catch (err: any) {
-      toast.error(err.message || "Action failed");
+      toast.error(err.message || "Veprimi dështoi");
     } finally {
       setLoadingAction(null);
     }
   };
 
   const actions = [
-    { key: "mark-all-read", icon: Reply, title: "Mark All Read", desc: "Mark all unread emails as read", color: "text-primary" },
-    { key: "archive-read", icon: Archive, title: "Archive Read", desc: "Delete all read emails", color: "text-category-work" },
-    { key: "star-important", icon: Star, title: "Star Important", desc: "Star emails categorized as important", color: "text-category-documents" },
-    { key: "unstar-all", icon: Tag, title: "Unstar All", desc: "Remove stars from all emails", color: "text-category-personal" },
-    { key: "clean-spam", icon: Trash2, title: "Clean Spam", desc: "Delete spam emails", color: "text-destructive" },
-    { key: "coming-soon", icon: Forward, title: "Smart Forward", desc: "Coming soon", color: "text-category-meetings" },
+    { key: "mark-all-read", icon: Reply, title: "Shëno të Gjitha si të Lexuara", desc: "Shëno të gjitha emailet e palexuara si të lexuara", color: "text-primary" },
+    { key: "archive-read", icon: Archive, title: "Arkivo të Lexuarat", desc: "Fshi të gjitha emailet e lexuara", color: "text-category-work" },
+    { key: "star-important", icon: Star, title: "Shëno me Yll të Rëndësishmet", desc: "Vendos yll tek emailet e kategorizuara si të rëndësishme", color: "text-category-documents" },
+    { key: "unstar-all", icon: Tag, title: "Hiq Yllin nga të Gjitha", desc: "Hiq yllin nga të gjitha emailet", color: "text-category-personal" },
+    { key: "clean-spam", icon: Trash2, title: "Pastro Spam-in", desc: "Fshi emailet spam", color: "text-destructive" },
+    { key: "coming-soon", icon: Forward, title: "Dërgo i Zgjuar", desc: "Së shpejti", color: "text-category-meetings" },
   ];
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold">Quick Actions</h1>
-        <p className="text-muted-foreground text-sm mt-1">One-click email management</p>
+        <h1 className="font-heading text-2xl font-bold">Veprime të Shpejta</h1>
+        <p className="text-muted-foreground text-sm mt-1">Menaxhim emaili me një klikim</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {actions.map((a) => (
