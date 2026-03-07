@@ -31,12 +31,12 @@ const Auth = () => {
           redirectTo: `${window.location.origin}/auth`,
         });
         if (error) throw error;
-        toast.success("Password reset email sent! Check your inbox.");
+        toast.success("Email-i për rivendosjen e fjalëkalimit u dërgua! Kontrolloni inbox-in tuaj.");
         setMode("login");
       } else if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Logged in successfully!");
+        toast.success("U kyçët me sukses!");
         navigate("/dashboard/inbox");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -45,7 +45,7 @@ const Auth = () => {
           options: { data: { full_name: fullName } },
         });
         if (error) throw error;
-        toast.success("Account created! Check your email for verification.");
+        toast.success("Llogaria u krijua! Kontrolloni email-in tuaj për verifikim.");
       }
     } catch (error: any) {
       toast.error(error.message);
@@ -79,23 +79,22 @@ const Auth = () => {
         <div className="text-center mb-8">
           <h1 className="font-heading text-3xl font-bold gradient-text">MailMind AI</h1>
           <p className="text-muted-foreground mt-2">
-            {mode === "login" && "Welcome back"}
-            {mode === "signup" && "Create your account"}
-            {mode === "forgot" && "Reset your password"}
+            {mode === "login" && "Mirësevini përsëri"}
+            {mode === "signup" && "Krijoni llogarinë tuaj"}
+            {mode === "forgot" && "Rivendosni fjalëkalimin tuaj"}
           </p>
         </div>
 
         <div className="glass-card p-8">
           {mode !== "forgot" && (
             <>
-              {/* Google OAuth */}
               <Button
                 variant="outline"
                 className="w-full mb-4"
                 onClick={handleGoogleLogin}
               >
                 <Chrome className="mr-2 h-4 w-4" />
-                Continue with Google
+                Vazhdo me Google
               </Button>
 
               <div className="relative mb-4">
@@ -103,7 +102,7 @@ const Auth = () => {
                   <span className="w-full border-t border-border/50" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                  <span className="bg-card px-2 text-muted-foreground">Ose</span>
                 </div>
               </div>
             </>
@@ -114,7 +113,7 @@ const Auth = () => {
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Full Name"
+                  placeholder="Emri i Plotë"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="pl-10 bg-secondary/50 border-border/50"
@@ -140,7 +139,7 @@ const Auth = () => {
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Password"
+                    placeholder="Fjalëkalimi"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -163,7 +162,7 @@ const Auth = () => {
                       onClick={() => setMode("forgot")}
                       className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      Forgot password?
+                      Keni harruar fjalëkalimin?
                     </button>
                   </div>
                 )}
@@ -172,12 +171,12 @@ const Auth = () => {
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading
-                ? "Loading..."
+                ? "Duke ngarkuar..."
                 : mode === "login"
-                ? "Sign In"
+                ? "Kyçu"
                 : mode === "signup"
-                ? "Sign Up"
-                : "Send Reset Link"}
+                ? "Regjistrohu"
+                : "Dërgo Linkun e Rivendosjes"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </form>
@@ -188,7 +187,7 @@ const Auth = () => {
                 onClick={() => setMode("signup")}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                Don't have an account? <span className="text-primary">Sign up</span>
+                Nuk keni llogari? <span className="text-primary">Regjistrohuni</span>
               </button>
             )}
             {mode === "signup" && (
@@ -196,7 +195,7 @@ const Auth = () => {
                 onClick={() => setMode("login")}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                Already have an account? <span className="text-primary">Sign in</span>
+                Keni tashmë një llogari? <span className="text-primary">Kyçuni</span>
               </button>
             )}
             {mode === "forgot" && (
@@ -204,7 +203,7 @@ const Auth = () => {
                 onClick={() => setMode("login")}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                Back to <span className="text-primary">Sign in</span>
+                Kthehu te <span className="text-primary">Kyçja</span>
               </button>
             )}
           </div>

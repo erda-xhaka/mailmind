@@ -8,15 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { callAI } from "@/lib/streamChat";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 interface ProofreadIssue {
@@ -47,7 +40,7 @@ const DraftEditPage = () => {
         .single();
 
       if (error || !data) {
-        toast.error("Draft not found");
+        toast.error("Draft-i nuk u gjet");
         navigate("/dashboard/drafts");
         return;
       }
@@ -68,9 +61,9 @@ const DraftEditPage = () => {
       .eq("id", draftId!);
 
     if (error) {
-      toast.error("Failed to save changes");
+      toast.error("Dështoi ruajtja e ndryshimeve");
     } else {
-      toast.success("Changes saved");
+      toast.success("Ndryshimet u ruajtën");
     }
     setSaving(false);
   };
@@ -78,7 +71,7 @@ const DraftEditPage = () => {
   const handleDelete = async () => {
     const { error } = await supabase.from("ai_replies").delete().eq("id", draftId!);
     if (!error) {
-      toast.success("Draft deleted");
+      toast.success("Draft-i u fshi");
       navigate("/dashboard/drafts");
     }
   };
@@ -95,7 +88,7 @@ const DraftEditPage = () => {
       setCorrectedText(parsed.corrected_text || message);
       setShowProofread(true);
     } catch {
-      toast.error("Proofread failed. Try again.");
+      toast.error("Korrigjimi dështoi. Provoni përsëri.");
     } finally {
       setProofreading(false);
     }
@@ -105,9 +98,8 @@ const DraftEditPage = () => {
     setMessage(correctedText);
     setShowProofread(false);
     setIssues([]);
-    toast.success("All corrections applied");
+    toast.success("Të gjitha korrigjimet u aplikuan");
   };
-
 
   if (loading) {
     return (
@@ -124,7 +116,7 @@ const DraftEditPage = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="font-heading text-2xl font-bold">Edit Draft</h1>
+          <h1 className="font-heading text-2xl font-bold">Modifiko Draft-in</h1>
         </div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -134,12 +126,12 @@ const DraftEditPage = () => {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to delete this draft?</AlertDialogTitle>
-              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+              <AlertDialogTitle>Jeni i sigurt që doni të fshini këtë draft?</AlertDialogTitle>
+              <AlertDialogDescription>Ky veprim nuk mund të kthehet mbrapa.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+              <AlertDialogCancel>Anulo</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Fshi</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -147,37 +139,36 @@ const DraftEditPage = () => {
 
       <div className="glass-card p-6 space-y-4">
         <div>
-          <label className="text-sm text-muted-foreground">To</label>
-          <Input value={toEmail} onChange={(e) => setToEmail(e.target.value)} placeholder="recipient@example.com" className="mt-1 bg-muted/50 border-border/50" />
+          <label className="text-sm text-muted-foreground">Për</label>
+          <Input value={toEmail} onChange={(e) => setToEmail(e.target.value)} placeholder="marresi@shembull.com" className="mt-1 bg-muted/50 border-border/50" />
         </div>
         <div>
-          <label className="text-sm text-muted-foreground">Subject</label>
-          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Email subject" className="mt-1 bg-muted/50 border-border/50" />
+          <label className="text-sm text-muted-foreground">Subjekti</label>
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subjekti i emailit" className="mt-1 bg-muted/50 border-border/50" />
         </div>
         <div>
-          <label className="text-sm text-muted-foreground">Message</label>
-          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Write your message..." className="mt-1 min-h-[200px] bg-muted/50 border-border/50" />
+          <label className="text-sm text-muted-foreground">Mesazhi</label>
+          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Shkruani mesazhin tuaj..." className="mt-1 min-h-[200px] bg-muted/50 border-border/50" />
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleProofread} disabled={proofreading || !message.trim()}>
             {proofreading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            Proofread
+            Korrigjo
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-            Save Changes
+            Ruaj Ndryshimet
           </Button>
         </div>
       </div>
 
-
       {showProofread && (
         <div className="glass-card p-6 mt-4">
-          <h3 className="font-heading font-semibold text-lg mb-1">Proofread Results</h3>
-          <p className="text-sm text-muted-foreground mb-4">Issues Found ({issues.length})</p>
+          <h3 className="font-heading font-semibold text-lg mb-1">Rezultatet e Korrigjimit</h3>
+          <p className="text-sm text-muted-foreground mb-4">Probleme të gjetura ({issues.length})</p>
           {issues.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-primary" /> No issues found. Your draft looks great!
+              <CheckCircle2 className="h-4 w-4 text-primary" /> Asnjë problem nuk u gjet. Draft-i juaj duket shkëlqyeshëm!
             </div>
           ) : (
             <>
@@ -194,7 +185,7 @@ const DraftEditPage = () => {
                 ))}
               </div>
               <Button className="mt-4" onClick={applyCorrections}>
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Apply All Corrections
+                <CheckCircle2 className="h-4 w-4 mr-2" /> Apliko të Gjitha Korrigjimet
               </Button>
             </>
           )}

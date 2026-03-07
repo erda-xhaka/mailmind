@@ -37,17 +37,16 @@ const SummariesPage = () => {
         return;
       }
 
-      // Group by thread_id or subject
       const threads: Record<string, typeof emails> = {};
       for (const e of emails) {
-        const key = e.thread_id || e.subject || "Untitled";
+        const key = e.thread_id || e.subject || "Pa titull";
         if (!threads[key]) threads[key] = [];
         threads[key].push(e);
       }
 
       const threadList = Object.entries(threads).map(([key, msgs]) => ({
         thread_key: key,
-        subject: msgs[0].subject || "Untitled",
+        subject: msgs[0].subject || "Pa titull",
         email_count: msgs.length,
         messages: msgs.map((m) => ({
           from: m.from_email,
@@ -63,7 +62,7 @@ const SummariesPage = () => {
       setSummaries(list);
       sessionStorage.setItem("mailmind_summaries", JSON.stringify(list));
     } catch (err: any) {
-      toast.error(err.message || "Failed to generate summaries");
+      toast.error(err.message || "Dështoi gjenerimi i përmbledhjeve");
     } finally {
       setLoading(false);
     }
@@ -73,12 +72,12 @@ const SummariesPage = () => {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold">Thread Summaries</h1>
-          <p className="text-muted-foreground text-sm mt-1">AI-powered summaries of your email conversations</p>
+          <h1 className="font-heading text-2xl font-bold">Përmbledhje Thread-esh</h1>
+          <p className="text-muted-foreground text-sm mt-1">Përmbledhje me AI të bisedave tuaja email</p>
         </div>
         <Button onClick={fetchAndSummarize} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          {loading ? "Analyzing..." : "Generate Summaries"}
+          {loading ? "Duke analizuar..." : "Gjenero Përmbledhje"}
         </Button>
       </div>
 
@@ -87,8 +86,8 @@ const SummariesPage = () => {
           <Brain className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground">
             {emailCount === 0
-              ? "No emails found. Sync your Gmail first."
-              : "Click 'Generate Summaries' to analyze your email threads with AI."}
+              ? "Nuk u gjetën emaile. Sinkronizoni Gmail-in së pari."
+              : "Klikoni 'Gjenero Përmbledhje' për të analizuar thread-et e emaileve tuaja me AI."}
           </p>
         </div>
       )}
@@ -105,7 +104,7 @@ const SummariesPage = () => {
                 <div className="flex items-center gap-2">
                   <Brain className="h-4 w-4 text-primary shrink-0" />
                   <span className="font-medium text-sm">{s.thread_title}</span>
-                  <span className="text-xs text-muted-foreground">{s.email_count} emails</span>
+                  <span className="text-xs text-muted-foreground">{s.email_count} emaile</span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">{s.summary}</p>
               </div>

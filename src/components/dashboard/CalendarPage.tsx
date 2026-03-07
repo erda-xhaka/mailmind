@@ -35,12 +35,12 @@ const CATEGORIES = [
 ];
 
 const TIME_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "today", label: "Today" },
-  { value: "this_week", label: "This Week" },
-  { value: "next_week", label: "Next Week" },
-  { value: "this_month", label: "This Month" },
-  { value: "next_month", label: "Next Month" },
+  { value: "all", label: "Të gjitha" },
+  { value: "today", label: "Sot" },
+  { value: "this_week", label: "Këtë javë" },
+  { value: "next_week", label: "Javën tjetër" },
+  { value: "this_month", label: "Këtë muaj" },
+  { value: "next_month", label: "Muajin tjetër" },
 ];
 
 const getCategoryColor = (cat: string | null) =>
@@ -48,26 +48,15 @@ const getCategoryColor = (cat: string | null) =>
 
 const getCategoryDot = (cat: string | null) => {
   const map: Record<string, string> = {
-    Akademike: "bg-blue-500",
-    Punë: "bg-green-500",
-    Personale: "bg-purple-500",
-    Shëndetësi: "bg-red-500",
-    Udhëtime: "bg-orange-500",
+    Akademike: "bg-blue-500", Punë: "bg-green-500", Personale: "bg-purple-500",
+    Shëndetësi: "bg-red-500", Udhëtime: "bg-orange-500",
   };
   return map[cat ?? ""] ?? "bg-primary";
 };
 
 const emptyForm = {
-  title: "",
-  start_date: "",
-  start_time: "09:00",
-  end_date: "",
-  end_time: "10:00",
-  location: "",
-  description: "",
-  category: "Punë",
-  participantInput: "",
-  participants: [] as string[],
+  title: "", start_date: "", start_time: "09:00", end_date: "", end_time: "10:00",
+  location: "", description: "", category: "Punë", participantInput: "", participants: [] as string[],
 };
 
 const CalendarPage = () => {
@@ -78,7 +67,6 @@ const CalendarPage = () => {
   const [timeFilter, setTimeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Dialog states
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -91,17 +79,13 @@ const CalendarPage = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data, error } = await supabase
-      .from("calendar_events")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("start_date", { ascending: true });
+      .from("calendar_events").select("*").eq("user_id", user.id).order("start_date", { ascending: true });
     if (!error && data) setEvents(data as unknown as CalendarEvent[]);
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
-  // Calendar grid
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 });
     const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 });
@@ -126,22 +110,16 @@ const CalendarPage = () => {
     return eventsByDate[format(selectedDate, "yyyy-MM-dd")] || [];
   }, [selectedDate, eventsByDate]);
 
-  // Upcoming events with filters
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     let filtered = events.filter((e) => isAfter(new Date(e.start_date), startOfDay(now)) || isSameDay(new Date(e.start_date), now));
 
     if (timeFilter !== "all") {
-      const today = startOfDay(now);
-      const todayEnd = endOfDay(now);
-      const weekStart = startOfISOWeek(now);
-      const weekEnd = endOfISOWeek(now);
-      const monthStart = startOfMonth(now);
-      const monthEnd = endOfMonth(now);
-      const nextWeekStart = startOfISOWeek(addWeeks(now, 1));
-      const nextWeekEnd = endOfISOWeek(addWeeks(now, 1));
-      const nextMonthStart = startOfMonth(addMonths(now, 1));
-      const nextMonthEnd = endOfMonth(addMonths(now, 1));
+      const today = startOfDay(now); const todayEnd = endOfDay(now);
+      const weekStart = startOfISOWeek(now); const weekEnd = endOfISOWeek(now);
+      const monthStart = startOfMonth(now); const monthEnd = endOfMonth(now);
+      const nextWeekStart = startOfISOWeek(addWeeks(now, 1)); const nextWeekEnd = endOfISOWeek(addWeeks(now, 1));
+      const nextMonthStart = startOfMonth(addMonths(now, 1)); const nextMonthEnd = endOfMonth(addMonths(now, 1));
 
       filtered = filtered.filter((e) => {
         const d = new Date(e.start_date);
@@ -156,67 +134,44 @@ const CalendarPage = () => {
       });
     }
 
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((e) => e.category === categoryFilter);
-    }
-
+    if (categoryFilter !== "all") filtered = filtered.filter((e) => e.category === categoryFilter);
     return filtered;
   }, [events, timeFilter, categoryFilter]);
 
-  // Stats
   const stats = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    const monthEvents = events.filter((e) => {
-      const d = new Date(e.start_date);
-      return d >= monthStart && d <= monthEnd;
-    });
+    const monthStart = startOfMonth(currentMonth); const monthEnd = endOfMonth(currentMonth);
+    const monthEvents = events.filter((e) => { const d = new Date(e.start_date); return d >= monthStart && d <= monthEnd; });
     const byCat: Record<string, number> = {};
     let totalHours = 0;
     monthEvents.forEach((e) => {
-      byCat[e.category || "Uncategorized"] = (byCat[e.category || "Uncategorized"] || 0) + 1;
+      byCat[e.category || "Pa kategori"] = (byCat[e.category || "Pa kategori"] || 0) + 1;
       totalHours += (new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 3600000;
     });
     return { total: monthEvents.length, byCat, totalHours: Math.round(totalHours * 10) / 10 };
   }, [events, currentMonth]);
 
-  // Form handlers
   const openCreateForm = (date?: Date) => {
     const d = date || new Date();
     setEditingEvent(null);
-    setForm({
-      ...emptyForm,
-      start_date: format(d, "yyyy-MM-dd"),
-      end_date: format(d, "yyyy-MM-dd"),
-    });
+    setForm({ ...emptyForm, start_date: format(d, "yyyy-MM-dd"), end_date: format(d, "yyyy-MM-dd") });
     setFormOpen(true);
   };
 
   const openEditForm = (event: CalendarEvent) => {
     setEditingEvent(event);
-    const sd = new Date(event.start_date);
-    const ed = new Date(event.end_date);
+    const sd = new Date(event.start_date); const ed = new Date(event.end_date);
     setForm({
-      title: event.title,
-      start_date: format(sd, "yyyy-MM-dd"),
-      start_time: format(sd, "HH:mm"),
-      end_date: format(ed, "yyyy-MM-dd"),
-      end_time: format(ed, "HH:mm"),
-      location: event.location || "",
-      description: event.description || "",
-      category: event.category || "Punë",
-      participantInput: "",
-      participants: Array.isArray(event.participants) ? event.participants : [],
+      title: event.title, start_date: format(sd, "yyyy-MM-dd"), start_time: format(sd, "HH:mm"),
+      end_date: format(ed, "yyyy-MM-dd"), end_time: format(ed, "HH:mm"),
+      location: event.location || "", description: event.description || "", category: event.category || "Punë",
+      participantInput: "", participants: Array.isArray(event.participants) ? event.participants : [],
     });
     setDetailOpen(false);
     setFormOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) {
-      toast({ title: "Titulli është i detyrueshëm", variant: "destructive" });
-      return;
-    }
+    if (!form.title.trim()) { toast({ title: "Titulli është i detyrueshëm", variant: "destructive" }); return; }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
@@ -225,13 +180,8 @@ const CalendarPage = () => {
     const endDatetime = `${form.end_date}T${form.end_time}:00`;
 
     const payload = {
-      user_id: user.id,
-      title: form.title.trim(),
-      start_date: startDatetime,
-      end_date: endDatetime,
-      location: form.location || null,
-      description: form.description || null,
-      category: form.category,
+      user_id: user.id, title: form.title.trim(), start_date: startDatetime, end_date: endDatetime,
+      location: form.location || null, description: form.description || null, category: form.category,
       participants: form.participants.length > 0 ? form.participants : null,
     };
 
@@ -261,9 +211,7 @@ const CalendarPage = () => {
       toast({ title: "Gabim gjatë fshirjes", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Eventi u fshi" });
-      setDeleteConfirmOpen(false);
-      setDetailOpen(false);
-      fetchEvents();
+      setDeleteConfirmOpen(false); setDetailOpen(false); fetchEvents();
     }
   };
 
@@ -290,39 +238,33 @@ const CalendarPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold">📅 Calendar</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage your events</p>
+          <h1 className="font-heading text-2xl font-bold">📅 Kalendari</h1>
+          <p className="text-muted-foreground text-sm mt-1">Menaxhoni eventet tuaja</p>
         </div>
         <Button onClick={() => openCreateForm()} className="gap-2">
-          <Plus className="h-4 w-4" /> Create New Event
+          <Plus className="h-4 w-4" /> Krijo Event të Ri
         </Button>
       </div>
 
-      {/* Month View */}
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h2 className="font-heading text-lg font-semibold">
-            {format(currentMonth, "MMMM yyyy")}
-          </h2>
+          <h2 className="font-heading text-lg font-semibold">{format(currentMonth, "MMMM yyyy")}</h2>
           <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Day headers */}
         <div className="grid grid-cols-7 gap-1 mb-1">
           {dayNames.map((d) => (
             <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
           ))}
         </div>
 
-        {/* Day cells */}
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((day) => {
             const key = format(day, "yyyy-MM-dd");
@@ -355,19 +297,16 @@ const CalendarPage = () => {
         </div>
       </div>
 
-      {/* Selected Date Events */}
       {selectedDate && (
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-heading text-base font-semibold">
-              {format(selectedDate, "EEEE, d MMMM yyyy")}
-            </h3>
+            <h3 className="font-heading text-base font-semibold">{format(selectedDate, "EEEE, d MMMM yyyy")}</h3>
             <Button variant="outline" size="sm" onClick={() => openCreateForm(selectedDate)} className="gap-1">
-              <Plus className="h-3.5 w-3.5" /> Add Event
+              <Plus className="h-3.5 w-3.5" /> Shto Event
             </Button>
           </div>
           {selectedDateEvents.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No events scheduled for this date</p>
+            <p className="text-muted-foreground text-sm">Asnjë event i planifikuar për këtë datë</p>
           ) : (
             <div className="space-y-2">
               {selectedDateEvents.map((e) => (
@@ -392,7 +331,6 @@ const CalendarPage = () => {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <Select value={timeFilter} onValueChange={setTimeFilter}>
           <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
@@ -405,7 +343,7 @@ const CalendarPage = () => {
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">Të gjitha kategoritë</SelectItem>
             {CATEGORIES.map((c) => (
               <SelectItem key={c.value} value={c.value}>
                 <span className="flex items-center gap-2">
@@ -418,18 +356,17 @@ const CalendarPage = () => {
         </Select>
         {(timeFilter !== "all" || categoryFilter !== "all") && (
           <Button variant="ghost" size="sm" onClick={() => { setTimeFilter("all"); setCategoryFilter("all"); }}>
-            Clear filters
+            Pastro filtrat
           </Button>
         )}
       </div>
 
-      {/* Upcoming Events */}
       <div>
-        <h2 className="font-heading text-lg font-semibold mb-3">📌 Upcoming Events</h2>
+        <h2 className="font-heading text-lg font-semibold mb-3">📌 Eventet e Ardhshme</h2>
         {upcomingEvents.length === 0 ? (
           <div className="glass-card p-8 text-center">
             <CalIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground">No upcoming events</p>
+            <p className="text-muted-foreground">Nuk ka evente të ardhshme</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -454,21 +391,20 @@ const CalendarPage = () => {
         )}
       </div>
 
-      {/* Stats */}
       <div className="glass-card p-5">
-        <h3 className="font-heading text-base font-semibold mb-3">📊 Monthly Stats</h3>
+        <h3 className="font-heading text-base font-semibold mb-3">📊 Statistikat Mujore</h3>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-primary">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total events</p>
+            <p className="text-xs text-muted-foreground">Evente totale</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-primary">{stats.totalHours}h</p>
-            <p className="text-xs text-muted-foreground">Hours scheduled</p>
+            <p className="text-xs text-muted-foreground">Orë të planifikuara</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-primary">{Object.keys(stats.byCat).length}</p>
-            <p className="text-xs text-muted-foreground">Categories used</p>
+            <p className="text-xs text-muted-foreground">Kategori të përdorura</p>
           </div>
         </div>
         {Object.keys(stats.byCat).length > 0 && (
@@ -483,50 +419,50 @@ const CalendarPage = () => {
         )}
       </div>
 
-      {/* Create/Edit Dialog */}
+      {/* Krijo/Modifiko Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingEvent ? "Edit Event" : "Create New Event"}</DialogTitle>
+            <DialogTitle>{editingEvent ? "Modifiko Eventin" : "Krijo Event të Ri"}</DialogTitle>
             <DialogDescription>
-              {editingEvent ? "Update event details below" : "Fill in the details to create a new event"}
+              {editingEvent ? "Përditësoni detajet e eventit më poshtë" : "Plotësoni detajet për të krijuar një event të ri"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Title *</Label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Event title" />
+              <Label>Titulli *</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Titulli i eventit" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Start date</Label>
+                <Label>Data e fillimit</Label>
                 <Input type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
               </div>
               <div>
-                <Label>Start time</Label>
+                <Label>Ora e fillimit</Label>
                 <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>End date</Label>
+                <Label>Data e mbarimit</Label>
                 <Input type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
               </div>
               <div>
-                <Label>End time</Label>
+                <Label>Ora e mbarimit</Label>
                 <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
               </div>
             </div>
             <div>
-              <Label>Location</Label>
-              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Optional" />
+              <Label>Vendndodhja</Label>
+              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Opsionale" />
             </div>
             <div>
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional" rows={3} />
+              <Label>Përshkrimi</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Opsionale" rows={3} />
             </div>
             <div>
-              <Label>Category</Label>
+              <Label>Kategoria</Label>
               <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -542,15 +478,15 @@ const CalendarPage = () => {
               </Select>
             </div>
             <div>
-              <Label>Participants</Label>
+              <Label>Pjesëmarrësit</Label>
               <div className="flex gap-2">
                 <Input
                   value={form.participantInput}
                   onChange={(e) => setForm({ ...form, participantInput: e.target.value })}
-                  placeholder="email@example.com"
+                  placeholder="email@shembull.com"
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addParticipant(); } }}
                 />
-                <Button type="button" variant="outline" size="sm" onClick={addParticipant}>Add</Button>
+                <Button type="button" variant="outline" size="sm" onClick={addParticipant}>Shto</Button>
               </div>
               {form.participants.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -568,13 +504,13 @@ const CalendarPage = () => {
             <Button variant="outline" onClick={() => setFormOpen(false)}>Anulo</Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-              {editingEvent ? "Save Changes" : "Krijo Event"}
+              {editingEvent ? "Ruaj Ndryshimet" : "Krijo Eventin"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Event Detail Dialog */}
+      {/* Detajet e Eventit */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -582,7 +518,7 @@ const CalendarPage = () => {
               <span className={`w-3 h-3 rounded-full ${getCategoryDot(viewingEvent?.category ?? null)}`} />
               {viewingEvent?.title}
             </DialogTitle>
-            <DialogDescription>Event details</DialogDescription>
+            <DialogDescription>Detajet e eventit</DialogDescription>
           </DialogHeader>
           {viewingEvent && (
             <div className="space-y-3 text-sm">
@@ -599,15 +535,11 @@ const CalendarPage = () => {
                   <span>{viewingEvent.location}</span>
                 </div>
               )}
-              <div>
-                <Badge variant="secondary">{viewingEvent.category}</Badge>
-              </div>
-              {viewingEvent.description && (
-                <p className="text-muted-foreground">{viewingEvent.description}</p>
-              )}
+              <div><Badge variant="secondary">{viewingEvent.category}</Badge></div>
+              {viewingEvent.description && <p className="text-muted-foreground">{viewingEvent.description}</p>}
               {viewingEvent.participants && (viewingEvent.participants as string[]).length > 0 && (
                 <div>
-                  <p className="flex items-center gap-1 text-muted-foreground mb-1"><Users className="h-4 w-4" /> Participants:</p>
+                  <p className="flex items-center gap-1 text-muted-foreground mb-1"><Users className="h-4 w-4" /> Pjesëmarrësit:</p>
                   <div className="flex flex-wrap gap-1">
                     {(viewingEvent.participants as string[]).map((p) => (
                       <Badge key={p} variant="outline">{p}</Badge>
@@ -619,16 +551,16 @@ const CalendarPage = () => {
           )}
           <DialogFooter className="mt-4">
             <Button variant="outline" className="gap-1" onClick={() => viewingEvent && openEditForm(viewingEvent)}>
-              <Pencil className="h-3.5 w-3.5" /> Edit
+              <Pencil className="h-3.5 w-3.5" /> Modifiko
             </Button>
             <Button variant="destructive" className="gap-1" onClick={() => setDeleteConfirmOpen(true)}>
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <Trash2 className="h-3.5 w-3.5" /> Fshi
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Konfirmimi i Fshirjes */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
