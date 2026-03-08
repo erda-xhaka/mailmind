@@ -1,15 +1,38 @@
 import { useState, useEffect } from "react";
-import { FileText, Loader2, Trash2, ExternalLink, Search, X, Eye, Download, Clock, HardDrive } from "lucide-react";
+import {
+  FileText,
+  Loader2,
+  Trash2,
+  ExternalLink,
+  Search,
+  X,
+  Eye,
+  Download,
+  Clock,
+  HardDrive,
+} from "lucide-react";
+import mammoth from "mammoth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +47,13 @@ interface Doc {
   file_type: string | null;
 }
 
+type StorageRef = {
+  bucket: string;
+  path: string;
+};
+
+type FilterType = "all" | "pdf" | "word" | "text";
+
 const formatFileSize = (bytes: number | null) => {
   if (!bytes) return "—";
   if (bytes < 1024) return `${bytes} B`;
@@ -31,11 +61,11 @@ const formatFileSize = (bytes: number | null) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const FILE_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
-  pdf: { icon: "📕", label: "PDF", color: "bg-red-500/10 text-red-400 border-red-500/20" },
-  word: { icon: "📘", label: "DOCX", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  text: { icon: "📝", label: "TXT", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  default: { icon: "📄", label: "Skedar", color: "bg-muted text-muted-foreground border-border" },
+const FILE_CONFIG: Record<string, { icon: string; label: string; tone: string }> = {
+  pdf: { icon: "📕", label: "PDF", tone: "border-border text-foreground" },
+  word: { icon: "📘", label: "DOCX", tone: "border-border text-foreground" },
+  text: { icon: "📝", label: "TXT", tone: "border-border text-foreground" },
+  default: { icon: "📄", label: "Skedar", tone: "border-border text-muted-foreground" },
 };
 
 const getFileConfig = (fileType: string | null) => {
@@ -46,7 +76,33 @@ const getFileConfig = (fileType: string | null) => {
   return FILE_CONFIG.default;
 };
 
-type FilterType = "all" | "pdf" | "word" | "text";
+const isPlaceholderText = (text: string | null | undefined) => {
+  if (!text) return false;
+  const trimmed = text.trim();
+  return trimmed.startsWith("[") && trimmed.endsWith("]");
+};
+
+const parseStorageRef = (fileUrl: string | null): StorageRef | null => {
+  if (!fileUrl) return null;
+
+  if (fileUrl.startsWith("documents/")) {
+    return { bucket: "documents", path: fileUrl.replace(/^documents\//, "") };
+  }
+
+  if (fileUrl.startsWith("chat-documents/")) {
+    return { bucket: "chat-documents", path: fileUrl.replace(/^chat-documents\//, "") };
+  }
+
+  const parsed = fileUrl.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/i);
+  if (parsed?.[1] && parsed?.[2]) {
+    return {
+      bucket: parsed[1],
+      path: decodeURIComponent(parsed[2]),
+    };
+  }
+
+  return null;
+};
 
 const DocumentsPage = () => {
   const [docs, setDocs] = useState<Doc[]>([]);
@@ -54,23 +110,68 @@ const DocumentsPage = () => {
   const [search, setSearch] = useState("");
   const [viewingDoc, setViewingDoc] = useState<Doc | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [fallbackTextByDocId, setFallbackTextByDocId] = useState<Record<string, string>>({});
+  const [loadingContentDocId, setLoadingContentDocId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDocs = async () => {
-      const { data, error } = await supabase
-        .from("documents")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("documents").select("*").order("created_at", { ascending: false });
 
       if (error) {
         toast.error("Nuk u arrit të ngarkoheshin dokumentet");
       } else {
-        setDocs((data as any) || []);
+        setDocs((data as Doc[]) || []);
       }
       setLoading(false);
     };
+
     fetchDocs();
   }, []);
+
+  useEffect(() => {
+    const hydrateModalContent = async () => {
+      if (!viewingDoc) return;
+
+      const hasExtracted = !!viewingDoc.extracted_text?.trim() && !isPlaceholderText(viewingDoc.extracted_text);
+      const alreadyLoaded = !!fallbackTextByDocId[viewingDoc.id];
+      const supportsClientRead =
+        viewingDoc.file_type === "text/plain" ||
+        viewingDoc.file_type === "application/msword" ||
+        viewingDoc.file_type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+      if (hasExtracted || alreadyLoaded || !supportsClientRead) return;
+
+      setLoadingContentDocId(viewingDoc.id);
+      try {
+        const url = await resolveDocumentUrl(viewingDoc);
+        if (!url) return;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Nuk u arrit të merrej skedari");
+
+        let parsedText = "";
+        if (viewingDoc.file_type === "text/plain") {
+          parsedText = (await response.text()).trim();
+        } else {
+          const arrayBuffer = await response.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          parsedText = (result.value || "").trim();
+        }
+
+        if (parsedText) {
+          setFallbackTextByDocId((prev) => ({ ...prev, [viewingDoc.id]: parsedText.slice(0, 50000) }));
+        }
+      } catch (error) {
+        console.error("Gabim gjatë leximit të dokumentit:", error);
+      } finally {
+        setLoadingContentDocId(null);
+      }
+    };
+
+    hydrateModalContent();
+  }, [viewingDoc, fallbackTextByDocId]);
 
   const deleteDoc = async (id: string) => {
     const { error } = await supabase.from("documents").delete().eq("id", id);
@@ -122,6 +223,46 @@ const DocumentsPage = () => {
 
   const totalSize = docs.reduce((sum, d) => sum + (d.file_size || 0), 0);
 
+  const resolveDocumentUrl = async (doc: Doc): Promise<string | null> => {
+    if (signedUrls[doc.id]) return signedUrls[doc.id];
+
+    const fileRef = parseStorageRef(doc.file_url);
+
+    if (!fileRef) {
+      if (doc.file_url?.startsWith("http")) return doc.file_url;
+      return null;
+    }
+
+    const candidateBuckets = [
+      fileRef.bucket,
+      fileRef.bucket === "chat-documents" ? "documents" : null,
+      fileRef.bucket === "documents" ? "chat-documents" : null,
+    ].filter(Boolean) as string[];
+
+    for (const bucket of candidateBuckets) {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(fileRef.path, 60 * 60);
+      if (!error && data?.signedUrl) {
+        setSignedUrls((prev) => ({ ...prev, [doc.id]: data.signedUrl }));
+        return data.signedUrl;
+      }
+    }
+
+    throw new Error("Nuk u arrit krijimi i linkut të sigurt për skedarin");
+  };
+
+  const openDocument = async (doc: Doc) => {
+    setOpeningDocId(doc.id);
+    try {
+      const url = await resolveDocumentUrl(doc);
+      if (!url) throw new Error("Skedari nuk ka link valid");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error: any) {
+      toast.error(error?.message || "Nuk u arrit hapja e skedarit");
+    } finally {
+      setOpeningDocId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -133,17 +274,11 @@ const DocumentsPage = () => {
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-6">
-        <h1 className="font-heading text-2xl font-bold flex items-center gap-2">
-          📁 Dokumentet
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Menaxhoni të gjitha dokumentet tuaja të ngarkuara
-        </p>
+        <h1 className="font-heading text-2xl font-bold flex items-center gap-2">📁 Dokumentet</h1>
+        <p className="text-muted-foreground text-sm mt-1">Menaxhoni të gjitha dokumentet tuaja të ngarkuara</p>
       </div>
 
-      {/* Stats Bar */}
       {docs.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="glass-card p-3 flex items-center gap-3">
@@ -176,7 +311,6 @@ const DocumentsPage = () => {
         </div>
       )}
 
-      {/* Search & Filter */}
       {docs.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <div className="relative flex-1">
@@ -204,7 +338,6 @@ const DocumentsPage = () => {
         </div>
       )}
 
-      {/* Empty State */}
       {docs.length === 0 ? (
         <div className="glass-card p-12 text-center">
           <div className="h-20 w-20 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center mx-auto mb-5">
@@ -225,7 +358,9 @@ const DocumentsPage = () => {
         <div className="space-y-2">
           {filtered.map((doc) => {
             const config = getFileConfig(doc.file_type);
-            const hasContent = !!doc.extracted_text && doc.extracted_text.trim().length > 0;
+            const contentText = doc.extracted_text?.trim();
+            const hasContent = !!contentText && !isPlaceholderText(contentText);
+            const hasFallback = !!fallbackTextByDocId[doc.id];
 
             return (
               <div
@@ -239,7 +374,7 @@ const DocumentsPage = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium truncate">{doc.name || "Pa titull"}</p>
-                    {hasContent && (
+                    {(hasContent || hasFallback) && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-primary/20 text-primary shrink-0">
                         Lexueshëm
                       </Badge>
@@ -250,7 +385,7 @@ const DocumentsPage = () => {
                     <span className="text-border">•</span>
                     <span>{formatFileSize(doc.file_size)}</span>
                     <span className="text-border">•</span>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${config.color}`}>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${config.tone}`}>
                       {config.label}
                     </Badge>
                   </div>
@@ -259,13 +394,15 @@ const DocumentsPage = () => {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingDoc(doc)}>
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
-                  {doc.file_url && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-3.5 w-3.5" />
-                      </a>
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openDocument(doc)}
+                    disabled={openingDocId === doc.id}
+                  >
+                    {openingDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive">
@@ -294,7 +431,6 @@ const DocumentsPage = () => {
         </div>
       )}
 
-      {/* Document Viewer Modal */}
       <Dialog open={!!viewingDoc} onOpenChange={() => setViewingDoc(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -304,27 +440,32 @@ const DocumentsPage = () => {
             </DialogTitle>
             <DialogDescription asChild>
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className={`text-xs ${getFileConfig(viewingDoc?.file_type ?? null).color}`}>
+                <Badge variant="outline" className={`text-xs ${getFileConfig(viewingDoc?.file_type ?? null).tone}`}>
                   {getFileConfig(viewingDoc?.file_type ?? null).label}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {formatFileSize(viewingDoc?.file_size ?? null)}
-                </span>
+                <span className="text-xs text-muted-foreground">{formatFileSize(viewingDoc?.file_size ?? null)}</span>
                 <span className="text-border">•</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDate(viewingDoc?.created_at ?? null)}
-                </span>
+                <span className="text-xs text-muted-foreground">{formatDate(viewingDoc?.created_at ?? null)}</span>
               </div>
             </DialogDescription>
           </DialogHeader>
 
-          <DocumentContentViewer doc={viewingDoc} />
+          <DocumentContentViewer
+            doc={viewingDoc}
+            loading={loadingContentDocId === viewingDoc?.id}
+            fallbackText={viewingDoc ? fallbackTextByDocId[viewingDoc.id] : undefined}
+            onOpenOriginal={viewingDoc ? () => openDocument(viewingDoc) : undefined}
+          />
 
-          {viewingDoc?.file_url && (
-            <Button variant="outline" className="w-full gap-2" asChild>
-              <a href={viewingDoc.file_url} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4" /> Shkarko skedarin origjinal
-              </a>
+          {viewingDoc && (
+            <Button variant="outline" className="w-full gap-2" onClick={() => openDocument(viewingDoc)} disabled={openingDocId === viewingDoc.id}>
+              {openingDocId === viewingDoc.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Download className="h-4 w-4" /> Hap / Shkarko skedarin origjinal
+                </>
+              )}
             </Button>
           )}
         </DialogContent>
@@ -333,67 +474,47 @@ const DocumentsPage = () => {
   );
 };
 
-/** Separated content viewer for the modal — handles all states gracefully */
-const DocumentContentViewer = ({ doc }: { doc: Doc | null }) => {
+const DocumentContentViewer = ({
+  doc,
+  loading,
+  fallbackText,
+  onOpenOriginal,
+}: {
+  doc: Doc | null;
+  loading: boolean;
+  fallbackText?: string;
+  onOpenOriginal?: () => void;
+}) => {
   if (!doc) return null;
 
-  const text = doc.extracted_text?.trim();
-  const hasContent = !!text && text.length > 0;
+  const dbText = doc.extracted_text?.trim();
+  const validDbText = dbText && !isPlaceholderText(dbText) ? dbText : "";
+  const displayText = validDbText || fallbackText || "";
   const isPdf = doc.file_type?.includes("pdf");
 
-  // If we have real extracted text content, show it nicely
-  if (hasContent) {
-    // Check if it's a placeholder message (not real content)
-    const isPlaceholder = text.startsWith("[") && text.endsWith("]");
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-border/50 bg-muted/20 p-6 text-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground">Duke lexuar përmbajtjen e dokumentit...</p>
+      </div>
+    );
+  }
 
-    if (isPlaceholder) {
-      return (
-        <div className="rounded-xl border border-border/50 bg-muted/20 p-6 text-center">
-          <div className="h-12 w-12 rounded-xl bg-primary/5 flex items-center justify-center mx-auto mb-3">
-            <FileText className="h-6 w-6 text-primary/40" />
-          </div>
-          {isPdf ? (
-            <>
-              <p className="text-sm font-medium text-foreground mb-1">Dokument PDF</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Përmbajtja e skedarëve PDF nuk mund të lexohet automatikisht ende. 
-                Shkarkoni skedarin për ta parë.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-foreground mb-1">Përmbajtja në përpunim</p>
-              <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                Ky dokument po përpunohet. Provoni përsëri pas disa minutash.
-              </p>
-            </>
-          )}
-          {doc.file_url && (
-            <Button variant="ghost" size="sm" className="mt-3 gap-1.5 text-xs" asChild>
-              <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3 w-3" /> Hap skedarin
-              </a>
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    // Real content — show it
+  if (displayText) {
     return (
       <div className="rounded-xl border border-border/50 bg-muted/10 overflow-hidden">
         <div className="px-4 py-2 border-b border-border/30 bg-muted/20 flex items-center justify-between">
           <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Përmbajtja</span>
-          <span className="text-[11px] text-muted-foreground">{text.length.toLocaleString()} karaktere</span>
+          <span className="text-[11px] text-muted-foreground">{displayText.length.toLocaleString()} karaktere</span>
         </div>
         <div className="p-4 text-sm leading-relaxed whitespace-pre-wrap max-h-[50vh] overflow-y-auto font-mono text-[13px]">
-          {text}
+          {displayText}
         </div>
       </div>
     );
   }
 
-  // No content at all
   return (
     <div className="rounded-xl border border-border/50 bg-muted/20 p-6 text-center">
       <div className="h-12 w-12 rounded-xl bg-primary/5 flex items-center justify-center mx-auto mb-3">
@@ -403,22 +524,21 @@ const DocumentContentViewer = ({ doc }: { doc: Doc | null }) => {
         <>
           <p className="text-sm font-medium text-foreground mb-1">Dokument PDF</p>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Skedarët PDF duhet të shkarkohen për t'u lexuar. Klikoni butonin më poshtë.
+            PDF nuk mund të shfaqet si tekst këtu, por mund ta hapni menjëherë me butonin më poshtë.
           </p>
         </>
       ) : (
         <>
-          <p className="text-sm font-medium text-foreground mb-1">Ende pa u përpunuar</p>
+          <p className="text-sm font-medium text-foreground mb-1">Përmbajtja nuk është gjetur</p>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Ky dokument nuk është përpunuar ende. Provoni ta ringarkoni ose shkarkoni skedarin origjinal.
+            Mund ta hapni skedarin origjinal dhe ta lexoni direkt pa gabime.
           </p>
         </>
       )}
-      {doc.file_url && (
-        <Button variant="ghost" size="sm" className="mt-3 gap-1.5 text-xs" asChild>
-          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-            <Download className="h-3 w-3" /> Shkarko skedarin
-          </a>
+
+      {onOpenOriginal && (
+        <Button variant="ghost" size="sm" className="mt-3 gap-1.5 text-xs" onClick={onOpenOriginal}>
+          <ExternalLink className="h-3 w-3" /> Hap skedarin
         </Button>
       )}
     </div>

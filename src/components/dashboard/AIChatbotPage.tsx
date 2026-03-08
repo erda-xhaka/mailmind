@@ -205,7 +205,7 @@ const AIChatbotPage = () => {
       }
 
       const uploaded: UploadedFile = {
-        name: file.name, size: file.size, url: urlData.publicUrl,
+        name: file.name, size: file.size, url: storageRef,
         text: text.slice(0, 8000), uploadedAt: new Date().toISOString(),
       };
 
