@@ -95,7 +95,7 @@ const Index = () => {
               me AI
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto">
-              MailMind AI lexon, përmbledh, kategorizon dhe harton përgjigje për emailet tuaja — që ju të fokusoheni në atë që ka vërtet rëndësi.
+              MailMind AI trajton pjesën e lodhshme të email-eve tuaj, duke i lexuar, përmbledhur dhe kategorizuar ato, madje edhe duke hartuar përgjigje për ju. Lëreni menaxhimin e inbox-it në duart e AI-së dhe përqendrohuni te puna juaj e vërtetë.
             </p>
             <div className="mt-8 flex items-center justify-center">
               <Button variant="hero" size="lg" asChild>
