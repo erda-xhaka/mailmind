@@ -119,7 +119,7 @@ const Index = () => {
               <span className="gradient-text">ta bërë inbox-in tuaj më produktiv</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
-              Mjete të fuqishme AI të dizajnuara për të eliminuar mbingarkesën e emaileve dhe për të rritur produktivitetin tuaj.
+              Automatizoni punën me email dhe kurseni kohë çdo ditë.
             </p>
           </motion.div>
 
