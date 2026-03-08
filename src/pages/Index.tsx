@@ -9,28 +9,28 @@ import {
 const features = [
   {
     icon: Brain,
-    title: "Përmbledhje Email-esh me AI",
-    description: "Merrni përmbledhje të menjëhershme dhe inteligjente të thread-eve të gjata të emailit, që të mos humbisni asnjë detaj të rëndësishëm.",
+    title: "Përmbledhje të Menjëhershme",
+    description: "Kapni thelbin e çdo email-i në sekonda.",
   },
   {
     icon: Bot,
-    title: "Gjenerim i Zgjuar i Përgjigjeve",
-    description: "Përgjigje të hartuara nga AI që përputhen me tonin dhe stilin tuaj. Rishikoni, modifikoni dhe dërgoni në sekonda.",
+    title: "Përgjigje të Mençura",
+    description: "Përgjigjuni dy herë më shpejt me sugjerimet tona inteligjente.",
   },
   {
     icon: Zap,
-    title: "Kategorizim Automatik",
-    description: "Emailet renditen automatikisht në Punë, Personale, Të Rëndësishme dhe kategori të personalizuara.",
+    title: "Organizim Inteligjent",
+    description: "Emailet tuaja të renditura aty ku u takon.",
   },
   {
     icon: FileText,
-    title: "Nxjerrja e Dokumenteve",
-    description: "Zbuloni dhe organizoni automatikisht bashkëngjitjet, faturat dhe dokumentet e rëndësishme.",
+    title: "Kapje e Mençur e Dokumenteve",
+    description: "Zbuloni dhe organizoni automatikisht të gjitha bashkëngjitjet, faturat dhe dokumentet e rëndësishme – asgjë nuk humbet më.",
   },
   {
     icon: Calendar,
-    title: "Integrimi me Kalendarin",
-    description: "Ftesat për takime zbulohen dhe sinkronizohen me kalendarin tuaj me kujtues të zgjuara.",
+    title: "Planifikim i Pandërprerë",
+    description: "Ftesat për evente zbulohen dhe shtohen direkt në kalendarin tuaj, pa pasur nevojë të bëni asgjë.",
   },
   {
     icon: Shield,
@@ -95,7 +95,7 @@ const Index = () => {
               me AI
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-xl mx-auto">
-              MailMind AI lexon, përmbledh, kategorizon dhe harton përgjigje për emailet tuaja — që ju të fokusoheni në atë që ka vërtet rëndësi.
+              MailMind AI trajton pjesën e lodhshme të email-eve tuaj, duke i lexuar, përmbledhur dhe kategorizuar ato, madje edhe duke hartuar përgjigje për ju. Lëreni menaxhimin e inbox-it në duart e AI-së dhe përqendrohuni te puna juaj e vërtetë.
             </p>
             <div className="mt-8 flex items-center justify-center">
               <Button variant="hero" size="lg" asChild>
