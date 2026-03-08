@@ -63,7 +63,7 @@ const Privacy = () => {
           <ul className="list-disc list-inside text-muted-foreground space-y-2 leading-relaxed">
             <li><strong className="text-foreground">Supabase</strong> — për autentifikimin dhe ruajtjen e të dhënave.</li>
             <li><strong className="text-foreground">Google (Gmail API)</strong> — për qasjen në emailet tuaja me autorizim.</li>
-            <li><strong className="text-foreground">Render</strong> — për hosting të infrastrukturës.</li>
+            <li><strong className="text-foreground">Vercel</strong> — për hosting të infrastrukturës.</li>
           </ul>
         </section>
 
