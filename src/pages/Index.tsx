@@ -84,13 +84,9 @@ const Index = () => {
             variants={fadeUp}
             custom={0}
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Mundësuar nga AI i Avancuar</span>
-            </div>
             <h1 className="font-heading text-5xl font-bold leading-tight tracking-tight md:text-6xl lg:text-7xl">
               Inbox-i juaj,{" "}
-              <span className="gradient-text">i superngarkuar</span>
+              <span className="gradient-text">tani më i zgjuar</span>
               <br />
               me AI
             </h1>
@@ -119,11 +115,11 @@ const Index = () => {
             viewport={{ once: true }}
           >
             <h2 className="font-heading text-3xl font-bold md:text-4xl">
-              Gjithçka që ju nevojitet për të{" "}
-              <span className="gradient-text">zotëruar inbox-in tuaj</span>
+              Gjithçka që ju duhet për{" "}
+              <span className="gradient-text">ta bërë inbox-in tuaj më produktiv</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
-              Mjete të fuqishme AI të dizajnuara për të eliminuar mbingarkesën e emaileve dhe për të rritur produktivitetin tuaj.
+              Automatizoni punën me email dhe kurseni kohë çdo ditë.
             </p>
           </motion.div>
 
