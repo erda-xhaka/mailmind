@@ -115,7 +115,7 @@ const Index = () => {
             viewport={{ once: true }}
           >
             <h2 className="font-heading text-3xl font-bold md:text-4xl">
-              Gjithçka që ju nevojitet për të{" "}
+              Gjithçka që ju duhet për{" "}
               <span className="gradient-text">ta bërë inbox-in tuaj më produktiv</span>
             </h2>
             <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
