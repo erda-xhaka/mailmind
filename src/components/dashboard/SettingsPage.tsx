@@ -48,8 +48,7 @@ const SettingsPage = () => {
 
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: fullName, avatar_url: avatarUrl })
-      .eq("id", user.id);
+      .upsert({ id: user.id, full_name: fullName, avatar_url: avatarUrl }, { onConflict: "id" });
 
     if (error) {
       toast.error("Dështoi ruajtja e profilit");
