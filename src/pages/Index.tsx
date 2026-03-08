@@ -84,13 +84,9 @@ const Index = () => {
             variants={fadeUp}
             custom={0}
           >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Mundësuar nga AI i Avancuar</span>
-            </div>
             <h1 className="font-heading text-5xl font-bold leading-tight tracking-tight md:text-6xl lg:text-7xl">
               Inbox-i juaj,{" "}
-              <span className="gradient-text">i superngarkuar</span>
+              <span className="gradient-text">tani më i zgjuar</span>
               <br />
               me AI
             </h1>
