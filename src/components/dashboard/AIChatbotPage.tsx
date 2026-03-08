@@ -171,11 +171,11 @@ const AIChatbotPage = () => {
       const { error: uploadError } = await supabase.storage.from("documents").upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
+      const storageRef = `documents/${filePath}`;
 
       const { data: docRecord, error: dbError } = await supabase
         .from("documents")
-        .insert({ name: file.name, file_url: urlData.publicUrl, user_id: user.id, file_size: file.size, file_type: file.type } as any)
+        .insert({ name: file.name, file_url: storageRef, user_id: user.id, file_size: file.size, file_type: file.type } as any)
         .select().single();
       if (dbError) throw dbError;
 
@@ -205,7 +205,7 @@ const AIChatbotPage = () => {
       }
 
       const uploaded: UploadedFile = {
-        name: file.name, size: file.size, url: urlData.publicUrl,
+        name: file.name, size: file.size, url: storageRef,
         text: text.slice(0, 8000), uploadedAt: new Date().toISOString(),
       };
 
