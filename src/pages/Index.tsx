@@ -106,24 +106,6 @@ const Index = () => {
             </div>
           </motion.div>
 
-          {/* Stats */}
-          <motion.div
-            className="mt-20 grid grid-cols-2 gap-4 md:grid-cols-4"
-            initial="hidden"
-            animate="visible"
-          >
-            {stats.map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                variants={fadeUp}
-                custom={i + 2}
-                className="glass-card p-6 text-center"
-              >
-                <div className="text-3xl font-heading font-bold gradient-text">{stat.value}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
         </div>
       </section>
 
