@@ -34,12 +34,12 @@ Deno.serve(async (req) => {
         break;
 
       case "parse":
-        systemPrompt = "You are an email parser. Extract key information from the email provided. Return a JSON object with these fields: sender (string), intent (string - e.g. Request, Information, Action Required, Follow-up), key_dates (array of strings), action_items (array of strings), sentiment (string - Positive, Neutral, Negative), priority (string - High, Medium, Low). Only return valid JSON, no other text.";
+        systemPrompt = "You are an email parser. Extract key information from the email provided. Return a JSON object with these fields: sender (string - the sender's name/email), intent (string - in Albanian, e.g. Kërkesë, Informacion, Veprim i Kërkuar, Ndjekje), key_dates (array of strings), action_items (array of strings - in Albanian), sentiment (string - in Albanian: Pozitiv, Neutral, Negativ), priority (string - in Albanian: I Lartë, Mesatar, I Ulët). All values except sender and key_dates must be in Albanian. Only return valid JSON, no other text.";
         userContent = emailContent;
         break;
 
       case "reply":
-        systemPrompt = `You are a professional email reply generator. Generate a reply to the email provided. Use a ${tone || "Professional"} tone. Write the reply directly without subject line or greeting format - just the reply text. Keep it concise and natural.`;
+        systemPrompt = `You are a professional email reply generator. Generate a reply in Albanian (shqip) to the email provided. Use a ${tone || "Professional"} tone. Write the reply directly without subject line or greeting format - just the reply text. Keep it concise and natural. The entire reply must be written in Albanian language.`;
         userContent = emailContent;
         break;
 
