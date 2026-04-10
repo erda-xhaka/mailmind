@@ -135,7 +135,7 @@ Return a JSON array where each element is: { "id": "email_id", "category": "one 
     });
   } catch (error) {
     console.error("AI assistant error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
