@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
         userContent = emailContent;
         break;
 
-      case "summarize":
-        systemPrompt = "You are an email thread summarizer. Summarize the email threads provided. For each thread, provide: thread_title (string), email_count (number), summary (string - 2-3 sentences), action_items (array of strings). Return a JSON array of these objects. Only return valid JSON, no other text.";
+        case "summarize":
+        systemPrompt = "You are an email thread summarizer. Summarize the email threads provided. For each thread, provide: thread_title (string - in Albanian), email_count (number), summary (string - 2-3 sentences in Albanian/shqip), action_items (array of strings - in Albanian/shqip). ALL text fields (thread_title, summary, action_items) MUST be written in Albanian language (gjuha shqipe), regardless of the original email language. Return a JSON array of these objects. Only return valid JSON, no other text.";
         userContent = JSON.stringify(emails);
         break;
 
