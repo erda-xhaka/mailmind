@@ -54,7 +54,7 @@ const SummaryDetailPage = () => {
 
         {summary.action_items?.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold mb-2 text-primary">Action Items</h2>
+            <h2 className="text-sm font-semibold mb-2 text-primary">Veprime për t'u Ndërmarrë</h2>
             <ul className="space-y-2">
               {summary.action_items.map((item: string, j: number) => (
                 <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
