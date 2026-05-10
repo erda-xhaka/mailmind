@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
     if (tokenRow) {
       // Check if token is expired or close to expiry
-      const isExpired = tokenRow.token_expires_at
+      const isExpired = !tokenRow.access_token || tokenRow.token_expires_at
         ? new Date(tokenRow.token_expires_at).getTime() <= Date.now() + 5 * 60 * 1000
         : true;
 
