@@ -6,6 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const refreshGoogleAccessToken = async (
+  refreshToken: string,
+  googleClientId: string,
+  googleClientSecret: string,
+) => {
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: googleClientId,
+      client_secret: googleClientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok || !tokenData.access_token) {
+    console.error("Token refresh failed:", tokenData);
+    return { error: tokenData };
+  }
+
+  return {
+    accessToken: tokenData.access_token as string,
+    expiresAt: new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString(),
+  };
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -60,34 +88,21 @@ Deno.serve(async (req) => {
     let accessToken: string | null = null;
 
     if (tokenRow) {
-      // Check if token is expired
+      // Check if token is expired or close to expiry
       const isExpired = tokenRow.token_expires_at
-        ? new Date(tokenRow.token_expires_at) <= new Date()
+        ? new Date(tokenRow.token_expires_at).getTime() <= Date.now() + 5 * 60 * 1000
         : true;
 
       if (isExpired && tokenRow.refresh_token) {
-        // Refresh the access token
-        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            refresh_token: tokenRow.refresh_token,
-            grant_type: "refresh_token",
-          }),
-        });
-        const tokenData = await tokenRes.json();
-        if (tokenData.access_token) {
-          accessToken = tokenData.access_token;
-          const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+        const refreshed = await refreshGoogleAccessToken(tokenRow.refresh_token, googleClientId, googleClientSecret);
+        if ("accessToken" in refreshed) {
+          accessToken = refreshed.accessToken;
           await supabaseAdmin
             .from("gmail_tokens")
-            .update({ access_token: accessToken, token_expires_at: expiresAt, updated_at: new Date().toISOString() })
+            .update({ access_token: accessToken, token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
             .eq("user_id", user.id);
         } else {
-          console.error("Token refresh failed:", tokenData);
-          return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: tokenData }), {
+          return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: refreshed.error }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
