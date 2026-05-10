@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
 
         const isRead = !detail.labelIds?.includes("UNREAD");
 
-        await supabaseAdmin.from("emails").insert({
+        const { error: insertError } = await supabaseAdmin.from("emails").insert({
           user_id: user.id,
           gmail_id: msg.id,
           thread_id: detail.threadId || null,
@@ -264,6 +264,11 @@ Deno.serve(async (req) => {
           is_starred: detail.labelIds?.includes("STARRED") || false,
           category: "uncategorized",
         });
+
+        if (insertError) {
+          console.error(`Failed to save message ${msg.id}:`, insertError);
+          continue;
+        }
 
         synced++;
       } catch (err) {
