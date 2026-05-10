@@ -160,10 +160,10 @@ const InboxPage = () => {
         const data = res.data;
         if (data.synced > 0) {
           toast.success(`U sinkronizuan ${data.synced} emaile të reja`);
-          await fetchEmails();
         } else {
           toast.info("Nuk ka emaile të reja për sinkronizim");
         }
+        await fetchEmails();
       }
     } catch (err: any) {
       toast.error("Gabim sinkronizimi: " + err.message);
