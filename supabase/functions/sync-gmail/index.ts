@@ -145,12 +145,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch emails from Gmail API
-    const gmailRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=in:inbox",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const gmailData = await gmailRes.json();
+    const fetchLatestInboxMessages = async (token: string) => {
+      const collected: any[] = [];
+      let pageToken: string | undefined;
+
+      for (let page = 0; page < 4 && collected.length < 200; page++) {
+        const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+        url.searchParams.set("maxResults", "50");
+        url.searchParams.set("q", "in:inbox newer_than:30d");
+        if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+        const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+
+        if (!response.ok) return { error: data, status: response.status };
+        collected.push(...(data.messages || []));
+        if (!data.nextPageToken) break;
+        pageToken = data.nextPageToken;
+      }
+
+      return { messages: collected };
+    };
+
+    // Fetch the latest inbox emails from Gmail API, refreshing token if Gmail rejects it
+    let gmailData = await fetchLatestInboxMessages(accessToken);
+    if ("error" in gmailData && gmailData.status === 401 && tokenRow?.refresh_token) {
+      const refreshed = await refreshGoogleAccessToken(tokenRow.refresh_token, googleClientId, googleClientSecret);
+      if ("accessToken" in refreshed) {
+        accessToken = refreshed.accessToken;
+        await supabaseAdmin
+          .from("gmail_tokens")
+          .update({ access_token: accessToken, token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
+        gmailData = await fetchLatestInboxMessages(accessToken);
+      }
+    }
+
+    if ("error" in gmailData) {
+      console.error("Gmail fetch failed:", gmailData.error);
+      return new Response(JSON.stringify({ error: "Failed to fetch Gmail messages", details: gmailData.error }), {
+        status: gmailData.status || 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!gmailData.messages || gmailData.messages.length === 0) {
       return new Response(JSON.stringify({ synced: 0, message: "No messages found" }), {
