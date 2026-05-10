@@ -139,6 +139,17 @@ const InboxPage = () => {
     setLoading(false);
   }, [selectedId]);
 
+  const refreshEmailsFromDatabase = useCallback(async () => {
+    const { data, error } = await supabase.from("emails").select("*").order("created_at", { ascending: false });
+    if (error) {
+      toast.error("Dështoi rifreskimi i inbox-it");
+      console.error(error);
+      return [];
+    }
+    setEmails(data || []);
+    return data || [];
+  }, []);
+
   const syncGmail = useCallback(async () => {
     setSyncing(true);
     try {
@@ -160,17 +171,19 @@ const InboxPage = () => {
         const data = res.data;
         if (data.synced > 0) {
           toast.success(`U sinkronizuan ${data.synced} emaile të reja`);
+          setActiveFilter(null);
         } else {
           toast.info("Nuk ka emaile të reja për sinkronizim");
         }
-        await fetchEmails();
+        const refreshedEmails = await refreshEmailsFromDatabase();
+        if (data.synced > 0 && refreshedEmails.length > 0) setSelectedId(refreshedEmails[0].id);
       }
     } catch (err: any) {
       toast.error("Gabim sinkronizimi: " + err.message);
     } finally {
       setSyncing(false);
     }
-  }, [fetchEmails]);
+  }, [refreshEmailsFromDatabase]);
 
   const categorizeEmails = useCallback(async () => {
     const uncategorized = emails.filter((e) => !e.category || e.category === "uncategorized");
