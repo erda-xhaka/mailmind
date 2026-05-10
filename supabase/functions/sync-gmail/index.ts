@@ -89,9 +89,9 @@ Deno.serve(async (req) => {
 
     if (tokenRow) {
       // Check if token is expired or close to expiry
-      const isExpired = !tokenRow.access_token || tokenRow.token_expires_at
-        ? new Date(tokenRow.token_expires_at).getTime() <= Date.now() + 5 * 60 * 1000
-        : true;
+      const isExpired = !tokenRow.access_token || !tokenRow.token_expires_at
+        ? true
+        : new Date(tokenRow.token_expires_at).getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (isExpired && tokenRow.refresh_token) {
         const refreshed = await refreshGoogleAccessToken(tokenRow.refresh_token, googleClientId, googleClientSecret);
