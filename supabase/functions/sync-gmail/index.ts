@@ -6,6 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const refreshGoogleAccessToken = async (
+  refreshToken: string,
+  googleClientId: string,
+  googleClientSecret: string,
+) => {
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: googleClientId,
+      client_secret: googleClientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok || !tokenData.access_token) {
+    console.error("Token refresh failed:", tokenData);
+    return { error: tokenData };
+  }
+
+  return {
+    accessToken: tokenData.access_token as string,
+    expiresAt: new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString(),
+  };
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -60,34 +88,21 @@ Deno.serve(async (req) => {
     let accessToken: string | null = null;
 
     if (tokenRow) {
-      // Check if token is expired
-      const isExpired = tokenRow.token_expires_at
-        ? new Date(tokenRow.token_expires_at) <= new Date()
-        : true;
+      // Check if token is expired or close to expiry
+      const isExpired = !tokenRow.access_token || !tokenRow.token_expires_at
+        ? true
+        : new Date(tokenRow.token_expires_at).getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (isExpired && tokenRow.refresh_token) {
-        // Refresh the access token
-        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: googleClientId,
-            client_secret: googleClientSecret,
-            refresh_token: tokenRow.refresh_token,
-            grant_type: "refresh_token",
-          }),
-        });
-        const tokenData = await tokenRes.json();
-        if (tokenData.access_token) {
-          accessToken = tokenData.access_token;
-          const expiresAt = new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString();
+        const refreshed = await refreshGoogleAccessToken(tokenRow.refresh_token, googleClientId, googleClientSecret);
+        if ("accessToken" in refreshed) {
+          accessToken = refreshed.accessToken;
           await supabaseAdmin
             .from("gmail_tokens")
-            .update({ access_token: accessToken, token_expires_at: expiresAt, updated_at: new Date().toISOString() })
+            .update({ access_token: accessToken, token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
             .eq("user_id", user.id);
         } else {
-          console.error("Token refresh failed:", tokenData);
-          return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: tokenData }), {
+          return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: refreshed.error }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -130,12 +145,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch emails from Gmail API
-    const gmailRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=in:inbox",
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const gmailData = await gmailRes.json();
+    const fetchLatestInboxMessages = async (token: string) => {
+      const collected: any[] = [];
+      let pageToken: string | undefined;
+
+      for (let page = 0; page < 4 && collected.length < 200; page++) {
+        const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+        url.searchParams.set("maxResults", "50");
+        url.searchParams.set("q", "in:inbox newer_than:30d");
+        if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+        const response = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+        const data = await response.json();
+
+        if (!response.ok) return { error: data, status: response.status };
+        collected.push(...(data.messages || []));
+        if (!data.nextPageToken) break;
+        pageToken = data.nextPageToken;
+      }
+
+      return { messages: collected };
+    };
+
+    // Fetch the latest inbox emails from Gmail API, refreshing token if Gmail rejects it
+    let gmailData = await fetchLatestInboxMessages(accessToken);
+    if ("error" in gmailData && gmailData.status === 401 && tokenRow?.refresh_token) {
+      const refreshed = await refreshGoogleAccessToken(tokenRow.refresh_token, googleClientId, googleClientSecret);
+      if ("accessToken" in refreshed) {
+        accessToken = refreshed.accessToken;
+        await supabaseAdmin
+          .from("gmail_tokens")
+          .update({ access_token: accessToken, token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
+        gmailData = await fetchLatestInboxMessages(accessToken);
+      }
+    }
+
+    if ("error" in gmailData) {
+      console.error("Gmail fetch failed:", gmailData.error);
+      return new Response(JSON.stringify({ error: "Failed to fetch Gmail messages", details: gmailData.error }), {
+        status: gmailData.status || 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!gmailData.messages || gmailData.messages.length === 0) {
       return new Response(JSON.stringify({ synced: 0, message: "No messages found" }), {
@@ -199,7 +251,7 @@ Deno.serve(async (req) => {
 
         const isRead = !detail.labelIds?.includes("UNREAD");
 
-        await supabaseAdmin.from("emails").insert({
+        const { error: insertError } = await supabaseAdmin.from("emails").insert({
           user_id: user.id,
           gmail_id: msg.id,
           thread_id: detail.threadId || null,
@@ -212,6 +264,11 @@ Deno.serve(async (req) => {
           is_starred: detail.labelIds?.includes("STARRED") || false,
           category: "uncategorized",
         });
+
+        if (insertError) {
+          console.error(`Failed to save message ${msg.id}:`, insertError);
+          continue;
+        }
 
         synced++;
       } catch (err) {
