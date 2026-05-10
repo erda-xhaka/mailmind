@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     // Fetch emails from Gmail API
     const gmailRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=in:inbox",
+      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=in:inbox",
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const gmailData = await gmailRes.json();
@@ -155,8 +155,8 @@ Deno.serve(async (req) => {
 
     let synced = 0;
 
-    // Fetch full details for new messages (batch of 10)
-    const batch = newMessages.slice(0, 10);
+    // Fetch full details for ALL new messages (no artificial cap so refresh always pulls latest)
+    const batch = newMessages;
     for (const msg of batch) {
       try {
         const detailRes = await fetch(
