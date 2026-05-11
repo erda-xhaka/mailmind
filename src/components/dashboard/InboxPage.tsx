@@ -155,7 +155,7 @@ const InboxPage = () => {
   const syncGmail = useCallback(async () => {
     setSyncing(true);
     try {
-      const { data: { session } } = await supabase.auth.refreshSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Ju lutem kyçuni së pari"); return; }
 
       const { data: { user } } = await supabase.auth.getUser();
