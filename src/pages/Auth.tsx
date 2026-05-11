@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const GMAIL_OAUTH_SCOPES = "openid email profile https://www.googleapis.com/auth/gmail.readonly";
+
 const Auth = () => {
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
@@ -59,10 +61,11 @@ const Auth = () => {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard/inbox`,
-        scopes: "https://www.googleapis.com/auth/gmail.readonly",
+        scopes: GMAIL_OAUTH_SCOPES,
         queryParams: {
           access_type: "offline",
-          prompt: "consent",
+          prompt: "consent select_account",
+          include_granted_scopes: "true",
         },
       },
     });
