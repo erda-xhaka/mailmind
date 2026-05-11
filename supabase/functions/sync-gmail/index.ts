@@ -72,11 +72,15 @@ Deno.serve(async (req) => {
     // Get provider token from user's identity
     const googleIdentity = user.identities?.find((i) => i.provider === "google");
     if (!googleIdentity) {
-      return new Response(JSON.stringify({ error: "Google account not linked" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "Google account not linked", reauthRequired: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const body = await req.json().catch(() => ({}));
+    const providerToken = typeof body.provider_token === "string" ? body.provider_token : null;
+    const providerRefreshToken = typeof body.provider_refresh_token === "string" ? body.provider_refresh_token : null;
 
     // Check for existing refresh token
     const { data: tokenRow } = await supabaseAdmin
@@ -88,6 +92,19 @@ Deno.serve(async (req) => {
     let accessToken: string | null = null;
 
     if (tokenRow) {
+      // If the current OAuth session contains newer Google tokens, store them first.
+      // This prevents an old/revoked refresh token from blocking sync after reconnecting Gmail.
+      if (providerToken || providerRefreshToken) {
+        const tokenUpdate = {
+          access_token: providerToken || tokenRow.access_token,
+          refresh_token: providerRefreshToken || tokenRow.refresh_token,
+          token_expires_at: providerToken ? new Date(Date.now() + 3600 * 1000).toISOString() : tokenRow.token_expires_at,
+          updated_at: new Date().toISOString(),
+        };
+        await supabaseAdmin.from("gmail_tokens").update(tokenUpdate).eq("user_id", user.id);
+        Object.assign(tokenRow, tokenUpdate);
+      }
+
       // Check if token is expired or close to expiry
       const isExpired = !tokenRow.access_token || !tokenRow.token_expires_at
         ? true
@@ -102,24 +119,26 @@ Deno.serve(async (req) => {
             .update({ access_token: accessToken, token_expires_at: refreshed.expiresAt, updated_at: new Date().toISOString() })
             .eq("user_id", user.id);
         } else {
-          return new Response(JSON.stringify({ error: "Failed to refresh Google token", details: refreshed.error }), {
-            status: 400,
+          if (providerToken) {
+            accessToken = providerToken;
+          } else {
+            return new Response(JSON.stringify({
+              error: "Gmail token expired. Please reconnect Gmail from Settings.",
+              reauthRequired: true,
+              details: refreshed.error,
+            }), {
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+            });
+          }
         }
       } else {
         accessToken = tokenRow.access_token;
       }
     } else {
-      // First time: get the provider token from session
-      // The provider_token is available right after OAuth login
-      const body = await req.json().catch(() => ({}));
-      const providerToken = body.provider_token;
-      const providerRefreshToken = body.provider_refresh_token;
-
       if (!providerToken) {
-        return new Response(JSON.stringify({ error: "No Gmail token available. Please re-login with Google." }), {
-          status: 400,
+        return new Response(JSON.stringify({ error: "No Gmail token available. Please reconnect Gmail from Settings.", reauthRequired: true }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -139,8 +158,8 @@ Deno.serve(async (req) => {
     }
 
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: "No valid access token" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "No valid access token", reauthRequired: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -183,8 +202,15 @@ Deno.serve(async (req) => {
 
     if ("error" in gmailData) {
       console.error("Gmail fetch failed:", gmailData.error);
-      return new Response(JSON.stringify({ error: "Failed to fetch Gmail messages", details: gmailData.error }), {
-        status: gmailData.status || 400,
+      const needsReconnect = gmailData.status === 401 || gmailData.status === 403;
+      return new Response(JSON.stringify({
+        error: needsReconnect
+          ? "Gmail authorization failed. Please reconnect Gmail from Settings."
+          : "Failed to fetch Gmail messages",
+        reauthRequired: needsReconnect,
+        details: gmailData.error,
+      }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -281,8 +307,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Sync error:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: (error as Error).message, fallback: true }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
