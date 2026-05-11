@@ -72,8 +72,8 @@ Deno.serve(async (req) => {
     // Get provider token from user's identity
     const googleIdentity = user.identities?.find((i) => i.provider === "google");
     if (!googleIdentity) {
-      return new Response(JSON.stringify({ error: "Google account not linked" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "Google account not linked", reauthRequired: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -158,8 +158,8 @@ Deno.serve(async (req) => {
     }
 
     if (!accessToken) {
-      return new Response(JSON.stringify({ error: "No valid access token" }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: "No valid access token", reauthRequired: true }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
         reauthRequired: needsReconnect,
         details: gmailData.error,
       }), {
-        status: needsReconnect ? 200 : (gmailData.status || 400),
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
