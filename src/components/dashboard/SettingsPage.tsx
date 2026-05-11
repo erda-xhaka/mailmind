@@ -15,7 +15,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasGoogle, setHasGoogle] = useState(false);
-  const [googleIdentity, setGoogleIdentity] = useState<any>(null);
+  const [googleIdentity, setGoogleIdentity] = useState<Parameters<typeof supabase.auth.unlinkIdentity>[0] | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
