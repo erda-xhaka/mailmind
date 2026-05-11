@@ -9,6 +9,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const GMAIL_OAUTH_SCOPES = "openid email profile https://www.googleapis.com/auth/gmail.readonly";
+
 interface Email {
   id: string;
   from_email: string | null;
@@ -153,7 +155,7 @@ const InboxPage = () => {
   const syncGmail = useCallback(async () => {
     setSyncing(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.refreshSession();
       if (!session) { toast.error("Ju lutem kyçuni së pari"); return; }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -170,7 +172,19 @@ const InboxPage = () => {
       } else {
         const data = res.data;
         if (data?.reauthRequired) {
-          toast.error("Lidhja me Gmail ka skaduar. Ju lutem ri-lidhni Gmail-in te Cilësimet.");
+          toast.error("Leja për Gmail mungon. Do të ridrejtoheni për ri-lidhje.");
+          await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+              redirectTo: `${window.location.origin}/dashboard/inbox`,
+              scopes: GMAIL_OAUTH_SCOPES,
+              queryParams: {
+                access_type: "offline",
+                prompt: "consent select_account",
+                include_granted_scopes: "true",
+              },
+            },
+          });
           return;
         }
         if (data?.error) {
