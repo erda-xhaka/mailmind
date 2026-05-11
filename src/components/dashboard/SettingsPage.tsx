@@ -61,7 +61,7 @@ const SettingsPage = () => {
   };
 
   const handleGoogleConnect = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.linkIdentity({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard/settings`,
