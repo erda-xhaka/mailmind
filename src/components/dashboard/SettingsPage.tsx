@@ -15,6 +15,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasGoogle, setHasGoogle] = useState(false);
+  const [googleIdentity, setGoogleIdentity] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,10 +24,9 @@ const SettingsPage = () => {
       if (!user) return;
 
       setEmail(user.email || "");
-      setHasGoogle(
-        user.app_metadata?.providers?.includes("google") ||
-        user.identities?.some((i) => i.provider === "google") || false
-      );
+      const linkedGoogleIdentity = user.identities?.find((i) => i.provider === "google") || null;
+      setGoogleIdentity(linkedGoogleIdentity);
+      setHasGoogle(user.app_metadata?.providers?.includes("google") || !!linkedGoogleIdentity);
 
       const { data } = await supabase
         .from("profiles")
@@ -81,6 +81,10 @@ const SettingsPage = () => {
     if (error) {
       toast.error("Dështoi shkëputja e Gmail-it");
     } else {
+      if (googleIdentity) {
+        await supabase.auth.unlinkIdentity(googleIdentity).catch(() => null);
+      }
+      setGoogleIdentity(null);
       setHasGoogle(false);
       toast.success("Gmail u shkëput me sukses");
     }
