@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
+const GMAIL_OAUTH_SCOPES = "openid email profile https://www.googleapis.com/auth/gmail.readonly";
+
 const SettingsPage = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -13,6 +15,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasGoogle, setHasGoogle] = useState(false);
+  const [googleIdentity, setGoogleIdentity] = useState<Parameters<typeof supabase.auth.unlinkIdentity>[0] | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,10 +24,9 @@ const SettingsPage = () => {
       if (!user) return;
 
       setEmail(user.email || "");
-      setHasGoogle(
-        user.app_metadata?.providers?.includes("google") ||
-        user.identities?.some((i) => i.provider === "google") || false
-      );
+      const linkedGoogleIdentity = user.identities?.find((i) => i.provider === "google") || null;
+      setGoogleIdentity(linkedGoogleIdentity);
+      setHasGoogle(user.app_metadata?.providers?.includes("google") || !!linkedGoogleIdentity);
 
       const { data } = await supabase
         .from("profiles")
@@ -59,12 +61,16 @@ const SettingsPage = () => {
   };
 
   const handleGoogleConnect = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.linkIdentity({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/dashboard/settings`,
-        scopes: "https://www.googleapis.com/auth/gmail.readonly",
-        queryParams: { access_type: "offline", prompt: "consent" },
+        scopes: GMAIL_OAUTH_SCOPES,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent select_account",
+          include_granted_scopes: "true",
+        },
       },
     });
     if (error) toast.error(error.message);
@@ -75,6 +81,10 @@ const SettingsPage = () => {
     if (error) {
       toast.error("Dështoi shkëputja e Gmail-it");
     } else {
+      if (googleIdentity) {
+        await supabase.auth.unlinkIdentity(googleIdentity).catch(() => null);
+      }
+      setGoogleIdentity(null);
       setHasGoogle(false);
       toast.success("Gmail u shkëput me sukses");
     }
