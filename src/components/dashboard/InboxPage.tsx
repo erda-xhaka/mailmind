@@ -173,6 +173,11 @@ const InboxPage = () => {
           toast.error("Lidhja me Gmail ka skaduar. Ju lutem ri-lidhni Gmail-in te Cilësimet.");
           return;
         }
+        if (data?.error) {
+          toast.error("Sinkronizimi dështoi: " + data.error);
+          console.error("Sync error:", data);
+          return;
+        }
         if (data.synced > 0) {
           toast.success(`U sinkronizuan ${data.synced} emaile të reja`);
           setActiveFilter(null);
