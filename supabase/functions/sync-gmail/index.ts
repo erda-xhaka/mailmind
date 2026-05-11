@@ -202,8 +202,15 @@ Deno.serve(async (req) => {
 
     if ("error" in gmailData) {
       console.error("Gmail fetch failed:", gmailData.error);
-      return new Response(JSON.stringify({ error: "Failed to fetch Gmail messages", details: gmailData.error }), {
-        status: gmailData.status || 400,
+      const needsReconnect = gmailData.status === 401 || gmailData.status === 403;
+      return new Response(JSON.stringify({
+        error: needsReconnect
+          ? "Gmail authorization failed. Please reconnect Gmail from Settings."
+          : "Failed to fetch Gmail messages",
+        reauthRequired: needsReconnect,
+        details: gmailData.error,
+      }), {
+        status: needsReconnect ? 200 : (gmailData.status || 400),
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
