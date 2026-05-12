@@ -79,8 +79,17 @@ const AIChatbotPage = () => {
 
     const contextMessages = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
     if (uploadedFiles.length > 0) {
-      const fileContext = uploadedFiles.map(f => `[Dokument: ${f.name}]\n${f.text}`).join("\n\n");
-      contextMessages.unshift({ role: "user", content: `Konteksti i dokumenteve të ngarkuara:\n${fileContext}` });
+      const fileContext = uploadedFiles
+        .map(f => `===== FILLIMI I DOKUMENTIT: ${f.name} =====\n${f.text}\n===== FUNDI I DOKUMENTIT: ${f.name} =====`)
+        .join("\n\n");
+      contextMessages.unshift({
+        role: "user",
+        content:
+          `Më poshtë është përmbajtja e plotë e dokumenteve të ngarkuara nga përdoruesi. ` +
+          `Kur përdoruesi bën pyetje rreth tyre (përmbledhje, kërkim, analizë), bazohu STRIKTISHT në këtë tekst. ` +
+          `Mos shpik informacion që nuk gjendet aty. Nëse diçka nuk ndodhet në dokument, thuaj qartë "Kjo nuk përmendet në dokument".\n\n` +
+          fileContext,
+      });
     }
 
     let assistantSoFar = "";
