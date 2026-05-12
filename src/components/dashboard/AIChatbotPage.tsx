@@ -197,16 +197,26 @@ const AIChatbotPage = () => {
         text = `[Dokument i ngarkuar: ${file.name} — Formati PDF.]`;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token && docRecord) {
-        supabase.functions.invoke("process-document", {
-          body: { filePath, fileType: file.type, documentId: (docRecord as any).id },
-        }).catch(err => console.error("Gabim përpunimi dokumenti:", err));
+      // Always call backend to extract (especially for PDF). For Word/TXT we already have text but
+      // backend gives a cleaner/longer extraction and persists it to the documents table.
+      if (docRecord) {
+        try {
+          const { data: procData, error: procError } = await supabase.functions.invoke("process-document", {
+            body: { filePath, fileType: file.type, documentId: (docRecord as any).id },
+          });
+          if (procError) console.error("Gabim përpunimi dokumenti:", procError);
+          const extracted = (procData as any)?.extracted_text;
+          if (typeof extracted === "string" && extracted.trim() && !extracted.startsWith("[")) {
+            text = extracted;
+          }
+        } catch (err) {
+          console.error("Gabim përpunimi dokumenti:", err);
+        }
       }
 
       const uploaded: UploadedFile = {
         name: file.name, size: file.size, url: storageRef,
-        text: text.slice(0, 8000), uploadedAt: new Date().toISOString(),
+        text: text.slice(0, 60000), uploadedAt: new Date().toISOString(),
       };
 
       setUploadedFiles((prev) => [...prev, uploaded]);
