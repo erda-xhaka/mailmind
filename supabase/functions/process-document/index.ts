@@ -81,7 +81,16 @@ Deno.serve(async (req) => {
         extractedText = "[Gabim gjatë nxjerrjes së tekstit nga dokumenti Word.]";
       }
     } else if (fileType === "application/pdf") {
-      extractedText = "[Dokument PDF — Përmbajtja nuk mund të ekstraktohet automatikisht ende.]";
+      try {
+        const { extractText, getDocumentProxy } = await import("https://esm.sh/unpdf@0.12.1");
+        const arrayBuffer = await fileData.arrayBuffer();
+        const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
+        const { text } = await extractText(pdf, { mergePages: true });
+        extractedText = (Array.isArray(text) ? text.join("\n") : text) || "[Dokumenti PDF nuk kishte tekst të nxjerrshëm.]";
+      } catch (e) {
+        console.error("PDF extract error:", e);
+        extractedText = "[Gabim gjatë nxjerrjes së tekstit nga PDF.]";
+      }
     } else {
       extractedText = "[Format i panjohur.]";
     }
@@ -89,7 +98,7 @@ Deno.serve(async (req) => {
     // Save extracted text using admin client
     const { error: updateError } = await adminClient
       .from("documents")
-      .update({ extracted_text: extractedText.slice(0, 50000) })
+      .update({ extracted_text: extractedText.slice(0, 200000) })
       .eq("id", documentId);
 
     if (updateError) {
@@ -100,7 +109,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ extracted_text: extractedText.slice(0, 8000) }), {
+    return new Response(JSON.stringify({ extracted_text: extractedText.slice(0, 100000) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
