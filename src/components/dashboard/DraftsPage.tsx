@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileEdit, Sparkles, Loader2, Trash2, Search, X } from "lucide-react";
+import { FileEdit, Sparkles, Loader2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, isYesterday, isToday, isThisWeek, isThisMonth, subMonths, isAfter } from "date-fns";
