@@ -129,9 +129,6 @@ const DraftsPage = () => {
           <h1 className="font-heading text-2xl font-bold">Draftet</h1>
           <p className="text-muted-foreground text-sm mt-1">Përgjigje dhe drafte email-esh të gjeneruara me AI</p>
         </div>
-        <Button onClick={createNewDraft}>
-          <Plus className="h-4 w-4 mr-2" /> Krijo Draft të Ri
-        </Button>
       </div>
 
       {drafts.length > 0 && (
