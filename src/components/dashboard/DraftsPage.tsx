@@ -67,23 +67,6 @@ const DraftsPage = () => {
 
   useEffect(() => { fetchDrafts(); }, []);
 
-  const createNewDraft = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("ai_replies")
-      .insert({ user_id: user.id, reply_text: "", to_email: "", subject: "" } as any)
-      .select()
-      .single();
-
-    if (error || !data) {
-      toast.error("Dështoi krijimi i draft-it");
-      return;
-    }
-    toast.success("Draft i ri u krijua");
-    navigate(`/dashboard/drafts/${data.id}`);
-  };
 
   const deleteDraft = async (id: string) => {
     const { error } = await supabase.from("ai_replies").delete().eq("id", id);
