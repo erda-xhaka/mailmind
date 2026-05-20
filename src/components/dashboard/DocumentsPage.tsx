@@ -252,11 +252,25 @@ const DocumentsPage = () => {
 
   const openDocument = async (doc: Doc) => {
     setOpeningDocId(doc.id);
+    // Hap dritaren menjëherë (brenda gjestit të përdoruesit) që të mos bllokohet nga browser-i në desktop
+    const newWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
     try {
       const url = await resolveDocumentUrl(doc);
       if (!url) throw new Error("Skedari nuk ka link valid");
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (newWindow && !newWindow.closed) {
+        newWindow.location.href = url;
+      } else {
+        // Fallback nëse popup u bllokua: krijo një lidhje dhe klikoje
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener,noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (error: any) {
+      if (newWindow && !newWindow.closed) newWindow.close();
       toast.error(error?.message || "Nuk u arrit hapja e skedarit");
     } finally {
       setOpeningDocId(null);
