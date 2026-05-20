@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileEdit, Sparkles, Loader2, Trash2, Plus, Search, X } from "lucide-react";
+import { FileEdit, Sparkles, Loader2, Trash2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,23 +67,6 @@ const DraftsPage = () => {
 
   useEffect(() => { fetchDrafts(); }, []);
 
-  const createNewDraft = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("ai_replies")
-      .insert({ user_id: user.id, reply_text: "", to_email: "", subject: "" } as any)
-      .select()
-      .single();
-
-    if (error || !data) {
-      toast.error("Dështoi krijimi i draft-it");
-      return;
-    }
-    toast.success("Draft i ri u krijua");
-    navigate(`/dashboard/drafts/${data.id}`);
-  };
 
   const deleteDraft = async (id: string) => {
     const { error } = await supabase.from("ai_replies").delete().eq("id", id);
@@ -146,9 +129,6 @@ const DraftsPage = () => {
           <h1 className="font-heading text-2xl font-bold">Draftet</h1>
           <p className="text-muted-foreground text-sm mt-1">Përgjigje dhe drafte email-esh të gjeneruara me AI</p>
         </div>
-        <Button onClick={createNewDraft}>
-          <Plus className="h-4 w-4 mr-2" /> Krijo Draft të Ri
-        </Button>
       </div>
 
       {drafts.length > 0 && (
