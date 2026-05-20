@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileEdit, Sparkles, Loader2, Trash2, Search, X } from "lucide-react";
+import { FileEdit, Sparkles, Loader2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, isYesterday, isToday, isThisWeek, isThisMonth, subMonths, isAfter } from "date-fns";
@@ -35,7 +34,6 @@ type DateFilter = "all" | "today" | "week" | "month" | "3months";
 const DraftsPage = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [recipientFilter, setRecipientFilter] = useState<string>("all");
   const navigate = useNavigate();
@@ -81,20 +79,12 @@ const DraftsPage = () => {
     return [...new Set(recipients)].sort();
   }, [drafts]);
 
-  const hasActiveFilters = dateFilter !== "all" || recipientFilter !== "all" || search.trim() !== "";
+  const hasActiveFilters = dateFilter !== "all" || recipientFilter !== "all";
 
-  const clearFilters = () => { setDateFilter("all"); setRecipientFilter("all"); setSearch(""); };
+  const clearFilters = () => { setDateFilter("all"); setRecipientFilter("all"); };
 
   const filtered = useMemo(() => {
     let result = drafts;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter((d) =>
-        (d.to_email || "").toLowerCase().includes(q) ||
-        (d.subject || "").toLowerCase().includes(q) ||
-        (d.reply_text || "").toLowerCase().includes(q)
-      );
-    }
     if (dateFilter !== "all") {
       result = result.filter((d) => {
         if (!d.created_at) return false;
@@ -112,7 +102,7 @@ const DraftsPage = () => {
       result = result.filter((d) => d.to_email === recipientFilter);
     }
     return result;
-  }, [drafts, search, dateFilter, recipientFilter]);
+  }, [drafts, dateFilter, recipientFilter]);
 
   if (loading) {
     return (
@@ -133,10 +123,6 @@ const DraftsPage = () => {
 
       {drafts.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4 items-center">
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Kërko drafte..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 bg-muted/50 border-border/50" />
-          </div>
           <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as DateFilter)}>
             <SelectTrigger className="w-[150px] bg-muted/50 border-border/50"><SelectValue /></SelectTrigger>
             <SelectContent>
